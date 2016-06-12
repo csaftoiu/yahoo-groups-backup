@@ -215,6 +215,9 @@ class YahooBackupScraper:
         if 'ygError' in formatted:
             if formatted['ygError']['httpStatus'] == 404:
                 return None
+            if formatted['ygError']['httpStatus'] == 500:
+                eprint("Got unexpected server error, trying again...")
+                return self.get_message(message_number)
             raise RuntimeError("Unexpected error:\n\n%s" % json.dumps(formatted))
 
         raw = self._load_json_url(url + "/raw")

@@ -6,6 +6,13 @@
   <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
   <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
   <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.min.js"></script>
+  <style>
+    td {
+      word-break: break-all;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
 </head>
 <body style="padding-top: 50px;">
 
@@ -45,8 +52,8 @@
   <table id="messages" class="table table-hover table-bordered" cellspacing="0" width="100%">
     <thead>
     <tr class="row">
-      <th class="col-xs-4  col-sm-4 col-md-6 col-lg-6">Subject</th>
-      <th class="col-xs-4  col-sm-3 col-md-2 col-lg-3">Author</th>
+      <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
+      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
       <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Date</th>
       <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
     </tr>
@@ -54,8 +61,8 @@
     <tbody>
     {% for message in messages %}
     <tr class="row">
-      <td class="col-xs-4  col-sm-4 col-md-6 col-lg-6"><a href="./messages/{{ message._id }}.html">{{ message.subject }}</a></td>
-      <td class="col-xs-4  col-sm-3 col-md-2 col-lg-3">{{ get_display_name(message) }}</td>
+      <td class="col-xs-4  col-sm-4 col-md-5 col-lg-6"><a href="./messages/{{ message._id }}.html">{{ message.subject }}</a></td>
+      <td class="col-xs-4  col-sm-3 col-md-3 col-lg-3">{{ get_display_name(message) }}</td>
       <td class="col-xs-4  col-sm-3 col-md-3 col-lg-2">{{ get_formatted_date(message) }}</td>
       <td class="hidden-xs col-sm-2 col-md-1 col-lg-1"><a href="./messages/{{ message._id }}.html">{{ message._id }}</a></td>
     </tr>
