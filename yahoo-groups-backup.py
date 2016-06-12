@@ -33,7 +33,7 @@ import sys
 import time
 
 from docopt import docopt
-from jinja2 import Template, FileSystemLoader, Environment
+import jinja2
 import pymongo
 import schema
 import splinter
@@ -273,15 +273,19 @@ class YahooBackupScraper:
             raise
 
 
-def message_author(msg):
+def message_author(msg, include_email, hide_email=True):
     """Return a formatted message author from a msg object."""
     if msg['authorName'] and msg['authorName'] != msg['profile']:
         res = "%s (%s)" % (msg['authorName'], msg['profile'])
     else:
         res = "%s" % (msg['profile'],)
 
-    if msg['from']:
-        res += " <%s>" % msg['from']
+    if include_email and msg['from']:
+        if hide_email:
+            disp = msg['from'].rsplit("@", 1)[0] + "@..."
+        else:
+            disp = msg['from']
+        res += " <%s>" % disp
 
     return res
 
@@ -311,7 +315,7 @@ def scrape_all(arguments):
         if not msg:
             eprint("Message #%s is missing" % (cur_message,))
         else:
-            eprint("Inserted message #%s by %s" % (cur_message, message_author(msg)))
+            eprint("Inserted message #%s by %s" % (cur_message, message_author(msg, True)))
 
         cur_message -= 1
 
@@ -342,10 +346,10 @@ def dump_site(arguments):
     os.makedirs(root_dir)
     os.makedirs(os.path.join(root_dir, messages_subdir))
 
-    loader = FileSystemLoader(searchpath="./templates/")
-    env = Environment(loader=loader)
+    loader = jinja2.FileSystemLoader(searchpath="./templates/")
+    env = jinja2.Environment(loader=loader)
     env.globals['group_name'] = arguments['<group_name>']
-    env.globals['get_display_name'] = message_author
+    env.globals['get_display_name'] = lambda *a, **kw: jinja2.escape(message_author(*a, **kw))
     env.globals['get_formatted_date'] = get_formatted_date
 
     def render_to_file(filename, template, template_args):

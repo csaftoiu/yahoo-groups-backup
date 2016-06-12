@@ -37,7 +37,7 @@
   {{ message_nav(true) }}
   <hr>
   {% set headers = [
-    ("From:", get_display_name(message)),
+    ("From:", get_display_name(message, include_email=True)),
     ("Date:", get_formatted_date(message)),
     ("Subject:", message.subject),
   ]
