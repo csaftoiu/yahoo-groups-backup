@@ -107,12 +107,19 @@ class YahooBackupDB:
             yield msg
 
     def num_messages(self):
-        """Return the number of messages in the database."""
-        return self.db.messages.count()
+        """Return the number of non-empty messages in the database."""
+        return self.db.messages.find({'messageBody': {'$exists': True}}).count()
 
     def get_latest_message(self):
         """Return the latest message."""
         return next(self.yield_all_messages())
+
+    def missing_message_ids(self):
+        """Return the set of the ids of all missing messages.."""
+        latest = self.get_latest_message()
+        ids = set(range(1, latest['_id']+1))
+        present_ids = set(doc['_id'] for doc in self.db.messages.find({}, {'_id': 1}))
+        return ids - present_ids
 
 
 class YahooBackupScraper:
@@ -324,14 +331,21 @@ def dump_site(arguments):
     env.globals['get_display_name'] = message_author
     env.globals['get_formatted_date'] = get_formatted_date
 
-
     def render_to_file(filename, template, template_args):
-        if not 'path_to_root' in template_args:
+        if 'path_to_root' not in template_args:
             raise ValueError("template_args must contain 'path_to_root'")
 
         if isinstance(template, str):
             template = env.get_template(template)
         open(os.path.join(root_dir, filename), "w").write(template.render(**template_args))
+
+    missing_ids = db.missing_message_ids()
+    if missing_ids:
+        eprint("")
+        eprint("WARNING! Backup is not complete, missing %s messages! Site will be incomplete." % (
+            len(missing_ids),
+        ))
+        eprint("")
 
     eprint("Rendering index...")
     render_to_file('index.html', 'index.html', {
