@@ -11,6 +11,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .highlight {
+      background-color: #ffff7f;
+    }
   </style>
 {% endblock %}
 {% block body %}
@@ -69,7 +72,7 @@
       }
 
       // highlight the row
-      $(table.row(index).nodes()).addClass('active');
+      $(table.row(index).nodes()).addClass('highlight');
 
       // go to page
       var page = Math.floor(index / table.page.len());
