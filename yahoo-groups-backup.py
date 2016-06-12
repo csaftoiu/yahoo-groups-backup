@@ -4,7 +4,13 @@ Yahoo! Groups backup scraper.
 
 Usage:
   yahoo-groups-backup.py scrape_all [options] <group_name>
+  yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
+
+Commands:
+  scrape_all     Scrape the entire group and insert it into the mongo database
+  dump_site      Dump the entire backup as a static website at the given root
+                 directory
 
 Options:
   -h --help                                   Show this screen
@@ -23,7 +29,8 @@ import sys
 import time
 
 from docopt import docopt
-from pymongo import MongoClient
+from jinja2 import Template
+import pymongo
 import schema
 import splinter
 import yaml
@@ -39,7 +46,66 @@ def eprint(*args, **kwargs):
     return print(*args, **kwargs, file=sys.stderr)
 
 
-class YahooBackup:
+class YahooBackupDB:
+    """Interface to store Yahoo! Group messages to a MongoDB. Group data is stored in a database
+    whose name is the same as the group name.
+
+    The `messages` collection contains all the message data returned by the Yahoo! Groups API.
+    Notable fields:
+        * '_id' - the message id ('msgId' from the API)
+        * 'authorName' - often empty, but may have a name
+        * 'from' - sender's email address
+        * 'profile' - profile name of the poster
+        * 'subject' - the subject
+        * 'postDate' - a timestamp of when the post was made
+        * 'messageBody' - the message body, as formatted HTML
+        * 'rawEmail' - the full raw email, with headers and everything
+
+    If a message is missing, then the document will contain an `_id` field and nothing else.
+    """
+    def __init__(self, mongo_cli, group_name):
+        self.group_name = group_name
+
+        self.cli = mongo_cli
+        self.db = getattr(self.cli, group_name)
+
+        self._ensure_indices()
+
+    def _ensure_indices(self):
+        self.db.messages.create_index([("postDate", pymongo.ASCENDING)])
+        self.db.messages.create_index([("authorName", pymongo.ASCENDING)])
+        self.db.messages.create_index([("from", pymongo.ASCENDING)])
+        self.db.messages.create_index([("profile", pymongo.ASCENDING)])
+
+    def has_message(self, message_number):
+        """Return whether we already have the given message number loaded."""
+        return bool(self.db.messages.find_one({'_id': message_number}))
+
+    def insert_message(self, message_number, message_obj):
+        """Insert the message document, for the given message number. Will raise an exception if the message
+        is already stored. For a missing message, pass `None` for `message_obj`."""
+        if not message_obj:
+            self.db.messages.insert_one({'_id': message_number})
+        else:
+            assert message_number == message_obj['msgId']
+
+            doc = {**message_obj, '_id': message_number}
+            del doc['msgId']
+            self.db.messages.insert_one(doc)
+
+    def yield_all_messages(self):
+        """Yield all existing messages (skipping missing ones), in reverse message_id order."""
+        for msg in self.db.messages.find().sort('_id', -1):
+            if not msg.get('messageBody'):
+                continue
+
+            yield msg
+
+
+class YahooBackupScraper:
+    """Scrape Yahoo! Group messages with Selenium. Login information is required for
+    private groups."""
+
     def __init__(self, group_name, login_email=None, password=None):
         self.group_name = group_name
         self.login_email = login_email
@@ -56,6 +122,9 @@ class YahooBackup:
 
     def _process_login_page(self):
         """Process the login page."""
+        if not self.login_email or not self.password:
+            raise ValueError("Detected private group! Login information is required")
+
         eprint("Processing the log-in page...")
 
         # email ...
@@ -99,11 +168,47 @@ class YahooBackup:
         )
         return self._load_json_url(url)['ygData']['messages'][0]['messageId']
 
+    @staticmethod
+    def _massage_message(data):
+        """Given a msg, massage it so it's a bit more sensible."""
+        # convert the timestamp to an integer, if possible
+        try:
+            data['postDate'] = int(data['postDate'])
+        except (KeyError, ValueError, TypeError):
+            eprint("Warning: got a non-int 'postDate' for message #%s: %s" % (
+                data.get('msgId'), data.get('postDate')),
+            )
+
+        # 'profile' is sometimes missing (??)
+        if 'profile' not in data:
+            data['profile'] = None
+
+        # parse out the from to keep only the email. If th
+        if '&lt;' in data['from'] or '&gt;'in data['from']:
+            assert '&lt;' in data['from'] and '&gt;' in data['from']
+            stripped_name, from_remainder = data['from'].split('&lt;', 1)
+            stripped_name = stripped_name.strip()
+            # make sure we're not losing any information
+            if stripped_name.startswith("&quot;"):
+                assert stripped_name.endswith("&quot;")
+                stripped_name = stripped_name[6:-6].strip()
+
+            assert stripped_name.strip() == data['authorName'].strip()
+            # leave only the email in
+            data['from'], leftover = from_remainder.split('&gt;', 1)
+            # make sure lost nothing on the right side
+            assert not leftover.strip()
+
+        # replace no_reply with None for missing emails
+        if data['from'] == 'no_reply@yahoogroups.com':
+            data['from'] = None
+
+        return data
+
     def get_message(self, message_number):
         """Get the data for the given message number. Returns None if the message doesn't exist.
         Returns the object in the 'ygData' key returned by the Yahoo! Groups API,
         with both the HTML and the raw data in it."""
-        eprint("Getting message #%s..." % (message_number,))
         url = "https://groups.yahoo.com/api/v1/groups/%s/messages/%s" % (self.group_name, message_number)
 
         formatted = self._load_json_url(url)
@@ -116,7 +221,88 @@ class YahooBackup:
 
         data = formatted['ygData']
         data['rawEmail'] = raw['ygData']['rawEmail']
-        return data
+
+        try:
+            return self._massage_message(data)
+        except:
+            import pprint
+            eprint("Failed to process message:\n%s" % (pprint.pformat(data)))
+            raise
+
+
+def message_author(msg):
+    """Return a formatted message author from a msg object."""
+    if msg['authorName'] and msg['authorName'] != msg['profile']:
+        res = "%s (%s)" % (msg['authorName'], msg['profile'])
+    else:
+        res = "%s" % (msg['profile'],)
+
+    if msg['from']:
+        res += " <%s>" % msg['from']
+
+    return res
+
+
+def scrape_all(arguments):
+    cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
+    db = YahooBackupDB(cli, arguments['<group_name>'])
+    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
+
+    last_message = scraper.get_last_message_number()
+    cur_message = last_message
+    skipped = 0
+    while cur_message >= 1:
+        if db.has_message(cur_message):
+            skipped += 1
+            cur_message -= 1
+            continue
+        else:
+            if skipped > 0:
+                eprint("Skipped %s messages we already processed." % skipped)
+                skipped = 0
+
+        msg = scraper.get_message(cur_message)
+        db.insert_message(cur_message, msg)
+        if not msg:
+            eprint("Message #%s is missing" % (cur_message,))
+        else:
+            eprint("Inserted message #%s by %s" % (cur_message, message_author(msg)))
+
+        cur_message -= 1
+
+    eprint("All messages from the beginning up to #%s have been scraped!" % (last_message,))
+
+
+def dump_site(arguments):
+    import datetime
+
+    cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
+    db = YahooBackupDB(cli, arguments['<group_name>'])
+    root_dir = arguments['<root_dir>']
+
+    if os.path.exists(root_dir):
+        sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
+
+    messages_dir = os.path.join(root_dir, "messages")
+
+    # make the paths
+    os.makedirs(root_dir)
+    os.makedirs(messages_dir)
+
+    # render index
+    def get_formatted_date(message):
+        timestamp = message['postDate']
+        dt = datetime.datetime.fromtimestamp(timestamp)
+        return dt.strftime("%b-%d-%y, %I:%M %p")
+
+
+    template = Template(open('templates/index.html').read())
+    open(os.path.join(root_dir, 'index.html'), "w").write(template.render(
+        group_name=arguments['<group_name>'],
+        messages=db.yield_all_messages(),
+        get_display_name=message_author,
+        get_formatted_date=get_formatted_date,
+    ))
 
 
 if __name__ == "__main__":
@@ -139,13 +325,7 @@ if __name__ == "__main__":
     except schema.SchemaError as e:
         sys.exit(e.code)
 
-    cli = MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
-
-    yaba = YahooBackup("actualfreedom", arguments['--login'], arguments['--password'])
-
-    last_message = yaba.get_last_message_number()
-    cur_message = last_message
-    while cur_message >= 1:
-        import pprint
-        pprint.pprint(yaba.get_message(cur_message))
-        cur_message -= 1
+    if arguments['scrape_all']:
+        scrape_all(arguments)
+    elif arguments['dump_site']:
+        dump_site(arguments)

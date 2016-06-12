@@ -1,4 +1,5 @@
 docopt
+jinja2
 pymongo
 pyyaml
 schema
