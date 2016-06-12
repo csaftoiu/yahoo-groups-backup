@@ -34,6 +34,7 @@ import time
 
 from docopt import docopt
 from jinja2 import Template, FileSystemLoader, Environment
+import lzstring
 import pymongo
 import schema
 import splinter
@@ -324,36 +325,55 @@ def dump_site(arguments):
     env.globals['get_display_name'] = message_author
     env.globals['get_formatted_date'] = get_formatted_date
 
-
-    def render_to_file(filename, template, template_args):
-        if not 'path_to_root' in template_args:
-            raise ValueError("template_args must contain 'path_to_root'")
-
+    def render_to_file(filename, template, template_args, encoding='utf8'):
         if isinstance(template, str):
             template = env.get_template(template)
-        open(os.path.join(root_dir, filename), "w").write(template.render(**template_args))
+        open(os.path.join(root_dir, filename), "w", encoding=encoding).write(template.render(**template_args))
 
-    eprint("Rendering index...")
-    render_to_file('index.html', 'index.html', {
-        'path_to_root': '.',
-        'messages': db.yield_all_messages(),
-    })
-
-    eprint("Rendering about page...")
-    render_to_file('about.html', 'about.html', {
-        'path_to_root': '.',
-        'last_message_date': get_formatted_date(db.get_latest_message()),
-    })
-
-    num_messages = db.num_messages()
-    eprint("Rendering %d messages..." % num_messages)
-    for i, msg in enumerate(db.yield_all_messages()):
-        if i % 1000 == 0:
-            eprint("    %d/%d..." % (i+1, num_messages))
-        render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
-            'path_to_root': '..',
-            'message': msg,
+    eprint("Rendering data...")
+    eprint("   Building messages list...")
+    messages = []
+    for msg in db.yield_all_messages():
+        messages.append({
+            'subject': msg.get('subject', ''),
+            'author': message_author(msg),
+            'timestamp': msg['postDate'],
+            'number': msg['_id'],
+            'body': msg['messageBody'],
         })
+
+    eprint("   Dumping to JSON...")
+    messages_json = json.dumps(messages, separators=(',',':'))
+
+    eprint("   Compressing %.2fkB..." % (len(messages_json) / 1024))
+    compressed = lzstring.LZString().compressToUTF16(messages_json)
+
+    eprint("   Writing compressed data...")
+    render_to_file('data.js', 'data.js', {
+        'data': compressed,
+    }, encoding='utf16')
+
+    # eprint("Rendering index...")
+    # render_to_file('index.html', 'index.html', {
+    #     'path_to_root': '.',
+    #     'messages': db.yield_all_messages(),
+    # })
+
+    # eprint("Rendering about page...")
+    # render_to_file('about.html', 'about.html', {
+    #     'path_to_root': '.',
+    #     'last_message_date': get_formatted_date(db.get_latest_message()),
+    # })
+    #
+    # num_messages = db.num_messages()
+    # eprint("Rendering %d messages..." % num_messages)
+    # for i, msg in enumerate(db.yield_all_messages()):
+    #     if i % 1000 == 0:
+    #         eprint("    %d/%d..." % (i+1, num_messages))
+    #     render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
+    #         'path_to_root': '..',
+    #         'message': msg,
+    #     })
 
     eprint("Site is ready in '%s'!" % root_dir)
 
