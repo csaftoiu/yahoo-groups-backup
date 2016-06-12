@@ -1,3 +1,5 @@
 docopt
+pymongo
 pyyaml
+schema
 splinter

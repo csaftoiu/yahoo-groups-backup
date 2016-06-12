@@ -23,8 +23,16 @@ import sys
 import time
 
 from docopt import docopt
+from pymongo import MongoClient
+import schema
 import splinter
 import yaml
+
+
+args_schema = schema.Schema({
+    '--mongo-port': schema.And(schema.Use(int), lambda n: 1 <= n <= 65535, error='Invalid mongo port'),
+    object: object,
+})
 
 
 def eprint(*args, **kwargs):
@@ -126,12 +134,14 @@ if __name__ == "__main__":
             arguments['--%s' % key] = val
         arguments.update(command_line_args)
 
-    import pprint
-    pprint.pprint(arguments)
+    try:
+        arguments = args_schema.validate(arguments)
+    except schema.SchemaError as e:
+        sys.exit(e.code)
 
-    sys.exit(1)
+    cli = MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
 
-    yaba = YahooBackup("actualfreedom", settings['login_email'], settings['password'])
+    yaba = YahooBackup("actualfreedom", arguments['--login'], arguments['--password'])
 
     last_message = yaba.get_last_message_number()
     cur_message = last_message
