@@ -1,9 +1,28 @@
 #!/usr/bin/env python
+"""
+Yahoo! Groups backup scraper.
+
+Usage:
+  yahoo-groups-backup.py scrape_all [options] <group_name>
+  yahoo-groups-backup.py -h | --help
+
+Options:
+  -h --help                                   Show this screen
+  -c <config_file> | --config=<config_file>   Use config file, if it exists [default: settings.yaml]
+                                              Command-line settings override the config file settings
+                                              "--mongo-host=foo" converts to "mongo-host: foo" in the
+                                              config file.
+  [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
+  --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
+  --mongo-port=<port>                         Port for mongo database [default: 27017]
+
+"""
 import json
 import os
 import sys
 import time
 
+from docopt import docopt
 import splinter
 import yaml
 
@@ -93,11 +112,24 @@ class YahooBackup:
 
 
 if __name__ == "__main__":
-    if not os.path.exists("settings.yaml"):
-        eprint("settings.yaml file is missing. Try `cp settings.yaml.template settings.yaml`.")
+    arguments = docopt(__doc__, version='Yahoo! Groups Backup-er 0.1')
+
+    if arguments['--config'] != 'settings.yaml' and not os.path.exists(arguments['--config']):
+        eprint("Specified config file '%s' does not exist." % arguments['--config'])
         sys.exit(1)
 
-    settings = yaml.load(open("settings.yaml"))
+    if os.path.exists(arguments['--config']):
+        settings = yaml.load(open(arguments['--config']))
+        command_line_args = arguments
+        arguments = {}
+        for key, val in settings.items():
+            arguments['--%s' % key] = val
+        arguments.update(command_line_args)
+
+    import pprint
+    pprint.pprint(arguments)
+
+    sys.exit(1)
 
     yaba = YahooBackup("actualfreedom", settings['login_email'], settings['password'])
 
