@@ -65,6 +65,10 @@ class YahooBackupDB:
         * 'postDate' - a timestamp of when the post was made
         * 'messageBody' - the message body, as formatted HTML
         * 'rawEmail' - the full raw email, with headers and everything
+        * 'nextInTime' - next message id, in time order
+        * 'nextInTopic' - next message id, in topic order
+        * 'prevInTime' - prev message id, in time order
+        * 'prevInTopic' - prev message id, in topic order
 
     If a message is missing, then the document will contain an `_id` field and nothing else.
     """
@@ -82,13 +86,23 @@ class YahooBackupDB:
         self.db.messages.create_index([("from", pymongo.ASCENDING)])
         self.db.messages.create_index([("profile", pymongo.ASCENDING)])
 
-    def has_message(self, message_number):
-        """Return whether we already have the given message number loaded."""
-        return bool(self.db.messages.find_one({'_id': message_number}))
+    def has_updated_message(self, message_number):
+        """Return whether we already have the given message number loaded and fully updated."""
+        query = self.db.messages.find({'_id': message_number})
+        if not query.count():
+            return False
 
-    def insert_message(self, message_number, message_obj):
-        """Insert the message document, for the given message number. Will raise an exception if the message
-        is already stored. For a missing message, pass `None` for `message_obj`."""
+        msg = query[0]
+        if msg.get('nextInTime', None) == 0:
+            # maybe need to update the 'next' link
+            eprint("Message may need updated 'next' link")
+            return False
+
+        return True
+
+    def upsert_message(self, message_number, message_obj):
+        """Insert the message document, for the given message number. If the message is already stored, will
+        update it. For a missing message, pass `None` for `message_obj`."""
         if not message_obj:
             self.db.messages.insert_one({'_id': message_number})
         else:
@@ -96,7 +110,7 @@ class YahooBackupDB:
 
             doc = {**message_obj, '_id': message_number}
             del doc['msgId']
-            self.db.messages.insert_one(doc)
+            self.db.messages.update_one({'_id': message_number}, {'$set': doc}, upsert=True)
 
     def yield_all_messages(self):
         """Yield all existing messages (skipping missing ones), in reverse message_id order."""
@@ -277,21 +291,23 @@ def scrape_all(arguments):
     db = YahooBackupDB(cli, arguments['<group_name>'])
     scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
 
+    skipped = [0]
+    def print_skipped(min):
+        if skipped[0] >= min:
+            eprint("Skipped %s messages we already processed" % skipped[0])
+            skipped[0] = 0
+
     last_message = scraper.get_last_message_number()
     cur_message = last_message
-    skipped = 0
     while cur_message >= 1:
-        if db.has_message(cur_message):
-            skipped += 1
+        if db.has_updated_message(cur_message):
+            skipped[0] += 1
+            print_skipped(1000)
             cur_message -= 1
             continue
-        else:
-            if skipped > 0:
-                eprint("Skipped %s messages we already processed." % skipped)
-                skipped = 0
 
         msg = scraper.get_message(cur_message)
-        db.insert_message(cur_message, msg)
+        db.upsert_message(cur_message, msg)
         if not msg:
             eprint("Message #%s is missing" % (cur_message,))
         else:
@@ -299,6 +315,7 @@ def scrape_all(arguments):
 
         cur_message -= 1
 
+    print_skipped(0)
     eprint("All messages from the beginning up to #%s have been scraped!" % (last_message,))
 
 
