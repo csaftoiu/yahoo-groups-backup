@@ -1,0 +1,13 @@
+  <div class="row" style="font-size: 125%;">
+    <div class="col-xs-4 text-left">
+      {% if message.prevInTime != 0 %}
+      <a href="./{{ message.prevInTime }}.html">&#x25c0;&nbsp;{% if message._id - message.prevInTime > 1 %}<span class="text-danger">({{ message._id - message.prevInTime - 1 }} missing)</span>{% endif %}&nbsp;Earlier</a>
+      {% endif %}
+    </div>
+    <div class="col-xs-4 text-center">#{{ message._id }}</div>
+    <div class="col-xs-4 text-right">
+      {% if message.nextInTime != 0 %}
+      <a href="./{{ message.nextInTime }}.html">Later&nbsp;{% if message.nextInTime - message._id > 1 %}<span class="text-danger">({{ message.nextInTime - message._id - 1 }} missing)</span>{% endif %}&nbsp;&#x25b6;</a>
+      {% endif %}
+    </div>
+  </div>

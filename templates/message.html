@@ -1,0 +1,38 @@
+{% extends "master.html" %}
+{% set active_page = '' %}
+{% block head %}
+<style type="text/css">html { overflow-y: scroll; }</style>
+{% endblock %}
+{% block body %}
+<div class="container">
+
+  <div class="text-center">
+    <h1>{{ group_name }} Yahoo! Group Backup</h1>
+  </div>
+  <hr>
+  {% include "message-nav.html" %}
+  <hr>
+  {% set headers = [
+    ("From:", get_display_name(message)),
+    ("Date:", get_formatted_date(message)),
+    ("Subject:", message.subject),
+  ]
+  %}
+  {% for header, content in headers %}
+  <div class="row" style="font-size: 125%;">
+    <div class="col-xs-4 col-sm-2"><b>{{ header }}</b></div>
+    <div class="col-xs-8 col-sm-10">{{ content }}</div>
+  </div>
+  {% endfor %}
+  <hr>
+  <div class="row">
+    <div class="col-xs-12">
+      {{ message.messageBody }}
+    </div>
+  </div>
+  <hr>
+  {% include "message-nav.html" %}
+  <hr>
+
+</div>
+{% endblock %}

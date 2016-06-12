@@ -25,11 +25,12 @@ Options:
 """
 import json
 import os
+import random
 import sys
 import time
 
 from docopt import docopt
-from jinja2 import Template
+from jinja2 import Template, FileSystemLoader, Environment
 import pymongo
 import schema
 import splinter
@@ -100,6 +101,14 @@ class YahooBackupDB:
                 continue
 
             yield msg
+
+    def num_messages(self):
+        """Return the number of messages in the database."""
+        return self.db.messages.count()
+
+    def get_latest_message(self):
+        """Return the latest message."""
+        return next(self.yield_all_messages())
 
 
 class YahooBackupScraper:
@@ -209,6 +218,8 @@ class YahooBackupScraper:
         """Get the data for the given message number. Returns None if the message doesn't exist.
         Returns the object in the 'ygData' key returned by the Yahoo! Groups API,
         with both the HTML and the raw data in it."""
+        # delay to prevent rate limiting
+        time.sleep(max(0, random.gauss(5.0, 2.5)))
         url = "https://groups.yahoo.com/api/v1/groups/%s/messages/%s" % (self.group_name, message_number)
 
         formatted = self._load_json_url(url)
@@ -277,8 +288,15 @@ def scrape_all(arguments):
 
 
 def dump_site(arguments):
+    # helpers
     import datetime
 
+    def get_formatted_date(message):
+        timestamp = message['postDate']
+        dt = datetime.datetime.fromtimestamp(timestamp)
+        return dt.strftime("%b-%d-%y, %I:%M %p")
+
+    # setup
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
     root_dir = arguments['<root_dir>']
@@ -286,26 +304,50 @@ def dump_site(arguments):
     if os.path.exists(root_dir):
         sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
-    messages_dir = os.path.join(root_dir, "messages")
+    messages_subdir = "messages"
 
     # make the paths
     os.makedirs(root_dir)
-    os.makedirs(messages_dir)
+    os.makedirs(os.path.join(root_dir, messages_subdir))
 
-    # render index
-    def get_formatted_date(message):
-        timestamp = message['postDate']
-        dt = datetime.datetime.fromtimestamp(timestamp)
-        return dt.strftime("%b-%d-%y, %I:%M %p")
+    loader = FileSystemLoader(searchpath="./templates/")
+    env = Environment(loader=loader)
+    env.globals['group_name'] = arguments['<group_name>']
+    env.globals['get_display_name'] = message_author
+    env.globals['get_formatted_date'] = get_formatted_date
 
 
-    template = Template(open('templates/index.html').read())
-    open(os.path.join(root_dir, 'index.html'), "w").write(template.render(
-        group_name=arguments['<group_name>'],
-        messages=db.yield_all_messages(),
-        get_display_name=message_author,
-        get_formatted_date=get_formatted_date,
-    ))
+    def render_to_file(filename, template, template_args):
+        if not 'path_to_root' in template_args:
+            raise ValueError("template_args must contain 'path_to_root'")
+
+        if isinstance(template, str):
+            template = env.get_template(template)
+        open(os.path.join(root_dir, filename), "w").write(template.render(**template_args))
+
+    eprint("Rendering index...")
+    render_to_file('index.html', 'index.html', {
+        'path_to_root': '.',
+        'messages': db.yield_all_messages(),
+    })
+
+    eprint("Rendering about page...")
+    render_to_file('about.html', 'about.html', {
+        'path_to_root': '.',
+        'last_message_date': get_formatted_date(db.get_latest_message()),
+    })
+
+    num_messages = db.num_messages()
+    eprint("Rendering %d messages..." % num_messages)
+    for i, msg in enumerate(db.yield_all_messages()):
+        if i % 1000 == 0:
+            eprint("    %d/%d..." % (i+1, num_messages))
+        render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
+            'path_to_root': '..',
+            'message': msg,
+        })
+
+    eprint("Site is ready in '%s'!" % root_dir)
 
 
 if __name__ == "__main__":
