@@ -66,6 +66,7 @@
     var currentHighlight = null;
 
     function goToMessageNumber(number) {
+      // NOTE, only works on unsorted/unfiltered table!
       var table = $('#messages').DataTable();
 
       // remove current highlight
@@ -123,26 +124,27 @@
         ]
       });
 
-      // insert 'go-to-message' DOM
+      /*// insert 'go-to-message' DOM
       $("div.go-to-message").html(
               "<label>Go to #: " +
               "<input id='select-message' class='form-control input-sm' placeholder='21345'>" +
               "<button class='btn btn-sm btn-primary' onclick='updateSelectMessage()'>Go</button>" +
               "</label>"
-      );
+      );*/
 
       // select message if specified
       var selectMessage = getParameterByName('select-message');
       if (selectMessage != null) {
-        $("#select-message").val(selectMessage);
-        updateSelectMessage();
+        /*$("#select-message").val(selectMessage);
+        updateSelectMessage();*/
+        goToMessageNumber(selectMessage);
       }
 
-      // clicking on table row also selects message
+      /*// clicking on table row also selects message
       $("#messages tbody").on('click', 'tr', function () {
         $("#select-message").val($(this).data("message"));
         updateSelectMessage();
-      });
+      });*/
 
       // show table
       $('#loading').css('display', 'none');

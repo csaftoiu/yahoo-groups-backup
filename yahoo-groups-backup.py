@@ -14,7 +14,10 @@ Commands:
 
 Options:
   -h --help                                   Show this screen
-  -c <config_file> | --config=<config_file>   Use config file, if it exists [default: settings.yaml]
+  -d --delay=<delay>                          Delay before scraping each message, to avoid rate limiting.
+                                              Delays by a gaussian distribution with average <delay> and
+                                              standard deviation <delay>/2. [default: 1]
+  -c --config=<config_file>                   Use config file, if it exists [default: settings.yaml]
                                               Command-line settings override the config file settings
                                               "--mongo-host=foo" converts to "mongo-host: foo" in the
                                               config file.
@@ -39,6 +42,7 @@ import yaml
 
 args_schema = schema.Schema({
     '--mongo-port': schema.And(schema.Use(int), lambda n: 1 <= n <= 65535, error='Invalid mongo port'),
+    '--delay': schema.And(schema.Use(float), lambda n: n > 0, error='Invalid delay, must be number > 0'),
     object: object,
 })
 
@@ -115,10 +119,11 @@ class YahooBackupScraper:
     """Scrape Yahoo! Group messages with Selenium. Login information is required for
     private groups."""
 
-    def __init__(self, group_name, login_email=None, password=None):
+    def __init__(self, group_name, login_email=None, password=None, delay=1):
         self.group_name = group_name
         self.login_email = login_email
         self.password = password
+        self.delay = delay
 
         self.br = splinter.Browser()
 
@@ -222,7 +227,7 @@ class YahooBackupScraper:
         Returns the object in the 'ygData' key returned by the Yahoo! Groups API,
         with both the HTML and the raw data in it."""
         # delay to prevent rate limiting
-        time.sleep(max(0, random.gauss(5.0, 2.5)))
+        time.sleep(max(0, random.gauss(self.delay, self.delay / 2)))
         url = "https://groups.yahoo.com/api/v1/groups/%s/messages/%s" % (self.group_name, message_number)
 
         formatted = self._load_json_url(url)
