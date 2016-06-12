@@ -1,3 +1,27 @@
+{% macro message_nav(top) %}
+  <div class="row" style="font-size: 125%;">
+    <div class="col-xs-4 text-left">
+      {% if not top %}<br>{% endif %}
+      {% if message.prevInTime != 0 %}
+      <a href="./{{ message.prevInTime }}.html">&#x25c0;&nbsp;{% if message._id - message.prevInTime > 1 %}<span class="text-danger">({{ message._id - message.prevInTime - 1 }} missing)</span>{% endif %}&nbsp;Earlier</a>
+      {% endif %}
+      {% if top %}<br>{% endif %}
+    </div>
+    <div class="col-xs-4 text-center">
+      {% if top %}<a href="{{ path_to_root }}/index.html?select-message={{ message._id }}">Back to Index</a><br>{% endif %}
+      #{{ message._id }}
+      {% if not top %}<br><a href="{{ path_to_root }}/index.html?select-message={{ message._id }}">Back to Index</a>{% endif %}
+    </div>
+    <div class="col-xs-4 text-right">
+      {% if not top %}<br>{% endif %}
+      {% if message.nextInTime != 0 %}
+      <a href="./{{ message.nextInTime }}.html">Later&nbsp;{% if message.nextInTime - message._id > 1 %}<span class="text-danger">({{ message.nextInTime - message._id - 1 }} missing)</span>{% endif %}&nbsp;&#x25b6;</a>
+      {% endif %}
+      {% if top %}<br>{% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
 {% extends "master.html" %}
 {% set active_page = '' %}
 {% block head %}
@@ -10,7 +34,7 @@
     <h1>{{ group_name }} Yahoo! Group Backup</h1>
   </div>
   <hr>
-  {% include "message-nav.html" %}
+  {{ message_nav(true) }}
   <hr>
   {% set headers = [
     ("From:", get_display_name(message)),
@@ -31,7 +55,7 @@
     </div>
   </div>
   <hr>
-  {% include "message-nav.html" %}
+  {{ message_nav(false) }}
   <hr>
 
 </div>

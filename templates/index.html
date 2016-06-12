@@ -35,19 +35,21 @@
       <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
       <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Date</th>
       <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
+      <th>Raw Number</th>
     </tr>
     </thead>
     <tbody>
     {% for message in messages %}
     <tr class="row">
       <td class="col-xs-4  col-sm-4 col-md-5 col-lg-6">
-        <a href="./messages/{{ message._id }}.html" target="_blank">{{ message.subject }}</a><br>
+        <a href="./messages/{{ message._id }}.html">{{ message.subject }}</a><br>
       </td>
       <td class="col-xs-4  col-sm-3 col-md-3 col-lg-3">{{ get_display_name(message) }}</td>
       <td class="col-xs-4  col-sm-3 col-md-3 col-lg-2">{{ get_formatted_date(message) }}</td>
       <td class="hidden-xs col-sm-2 col-md-1 col-lg-1">
-        <a href="./messages/{{ message._id }}.html" target="_blank">{{ message._id }}</a>
+        <a href="./messages/{{ message._id }}.html">{{ message._id }}</a>
       </td>
+      <td>{{ message._id }}</td>
     </tr>
     {% endfor %}
     </tbody>
@@ -58,8 +60,34 @@
 </div><!-- /.container -->
 
   <script type="text/javascript">
+    function goToMessageNumber(number) {
+      var table = $('#messages').DataTable();
+
+      var index = table.column(4).data().indexOf(''+number);
+      if (index === -1) {
+        return;
+      }
+
+      // highlight the row
+      $(table.row(index).nodes()).addClass('active');
+
+      // go to page
+      var page = Math.floor(index / table.page.len());
+      table.page(page).draw(false);
+    }
+
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
     $(document).ready(function() {
-      $('#messages').DataTable({
+      var table = $('#messages').DataTable({
         "order": [[ 3, "desc" ]],
         "dom":
            "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
@@ -67,10 +95,22 @@
            "<'row'<'col-sm-12'tr>>" +
            "<'row'<'col-sm-5'i><'col-sm-7'p>>",
         "lengthMenu": [ [ 10, 25, 50, 100, 1000, 5000, -1 ], [ 10, 25, 50, 100, 1000, 5000, "All" ]],
-        "pagingType": "simple_numbers"
+        "pagingType": "simple_numbers",
+        "columnDefs": [
+          {
+            "targets": [4],
+            "visible": false,
+            "searchable": false
+          }
+        ]
       });
       $('#loading').css('display', 'none');
       $('#table-container').css('display', 'initial');
+
+      var selectMessage = getParameterByName('select-message');
+      if (selectMessage != null) {
+        goToMessageNumber(parseInt(selectMessage));
+      }
     })
   </script>
 {% endblock %}

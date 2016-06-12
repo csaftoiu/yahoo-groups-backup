@@ -202,7 +202,10 @@ class YahooBackupScraper:
                 assert stripped_name.endswith("&quot;")
                 stripped_name = stripped_name[6:-6].strip()
 
-            assert stripped_name.strip() == data['authorName'].strip()
+            # if we have a weird encoding thing then forget it
+            if not stripped_name.startswith("=?"):
+                assert stripped_name.strip() == data['authorName'].strip()
+
             # leave only the email in
             data['from'], leftover = from_remainder.split('&gt;', 1)
             # make sure lost nothing on the right side
