@@ -3,14 +3,16 @@
 Yahoo! Groups backup scraper.
 
 Usage:
-  yahoo-groups-backup.py scrape_all [options] <group_name>
+  yahoo-groups-backup.py scrape_messages [options] <group_name>
+  yahoo-groups-backup.py scrape_files [options] <group_name>
   yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
 
 Commands:
-  scrape_all     Scrape the entire group and insert it into the mongo database
-  dump_site      Dump the entire backup as a static website at the given root
-                 directory
+  scrape_messages     Scrape all group messages that are not scraped yet and insert it into the mongo database
+  scrape_files        Scrape the group files and insert them into the mongo database
+  dump_site           Dump the entire backup as a static website at the given root
+                      directory
 
 Options:
   -h --help                                   Show this screen
@@ -28,14 +30,20 @@ Options:
 """
 import json
 import os
+import platform
 import random
 import sys
 import time
+import urllib.parse
 
+import dateutil.parser
 from docopt import docopt
+import gridfs
 import jinja2
 import pymongo
+import requests
 import schema
+from selenium.webdriver.common.keys import Keys
 import splinter
 import yaml
 
@@ -53,7 +61,8 @@ def eprint(*args, **kwargs):
 
 class YahooBackupDB:
     """Interface to store Yahoo! Group messages to a MongoDB. Group data is stored in a database
-    whose name is the same as the group name.
+    whose name is the same as the group name. File data is stored in that database name plus `_gridfs`, where
+    the gridfs _id is teh same as the file document _id, which is also the file path.
 
     The `messages` collection contains all the message data returned by the Yahoo! Groups API.
     Notable fields:
@@ -69,14 +78,22 @@ class YahooBackupDB:
         * 'nextInTopic' - next message id, in topic order
         * 'prevInTime' - prev message id, in time order
         * 'prevInTopic' - prev message id, in topic order
-
     If a message is missing, then the document will contain an `_id` field and nothing else.
+
+    The `files` collection contains all the data about files:
+        * `_id` - the full file path and name (unique)
+        * `url` - the url the file was downloaded from
+        * `mime` - file mimetype
+        * `size` - file size as reported by yahoo - float, in kilobytes
+        * `profile` - profile of user that posted the file
+        * `date` - date listed on the Yahoo! Group for the file
     """
     def __init__(self, mongo_cli, group_name):
         self.group_name = group_name
 
         self.cli = mongo_cli
         self.db = getattr(self.cli, group_name)
+        self.fs = gridfs.GridFS(getattr(self.cli, "%s_gridfs" % group_name))
 
         self._ensure_indices()
 
@@ -134,6 +151,33 @@ class YahooBackupDB:
         ids = set(range(1, latest['_id']+1))
         present_ids = set(doc['_id'] for doc in self.db.messages.find({}, {'_id': 1}))
         return ids - present_ids
+
+    # -- File operations
+
+    def has_file_entry(self, filePath):
+        return self.db.files.find({'_id': filePath}).count() > 0
+
+    def has_file_data(self, filePath):
+        return self.fs.exists({'_id': filePath})
+
+    def upsert_file_entry(self, file_entry):
+        doc = {**file_entry, '_id': file_entry['filePath']}
+        del doc['filePath']
+        self.db.files.update_one({'_id': doc['_id']}, {'$set': doc}, upsert=True)
+
+    def update_file_data(self, file_path, data):
+        if self.fs.exists({'_id': file_path}):
+            self.fs.delete(file_path)
+
+        self.fs.put(data, _id=file_path, filename=file_path)
+
+    def yield_all_files(self):
+        """Yield all (file_entry, grid_out_file) for all files in the database."""
+        for entry in self.db.files.find():
+            data = None
+            if self.fs.exists({'_id': entry['_id']}):
+                data = self.fs.get(entry['_id'])
+            yield entry, data
 
 
 class YahooBackupScraper:
@@ -272,6 +316,61 @@ class YahooBackupScraper:
             eprint("Failed to process message:\n%s" % (pprint.pformat(data)))
             raise
 
+    def open_tab(self):
+        if platform.system() == 'Darwin':
+            key_sequence = Keys.COMMAND + 't'
+        else:
+            key_sequence = Keys.CONTROL + 't'
+
+        self.br.driver.find_element_by_tag_name('body').send_keys(key_sequence)
+        time.sleep(1)
+
+    def close_tab(self):
+        if platform.system() == 'Darwin':
+            key_sequence = Keys.COMMAND + 'w'
+        else:
+            key_sequence = Keys.CONTROL + 'w'
+
+        self.br.driver.find_element_by_tag_name('body').send_keys(key_sequence)
+        time.sleep(1)
+
+    def yield_walk_files(self, path="."):
+        """Starting from `path`, yield a dict describing each file, and recurse into subdirectories."""
+        url = "https://groups.yahoo.com/neo/groups/%s/files/%s/" % (self.group_name, path)
+
+        self._visit_with_login(url)
+
+        # get all elements with data-file - these are the file entries
+        for el in self.br.find_by_xpath("//*[@data-file]"):
+            # get the data
+            data = el._element.get_attribute('data-file')
+            # data is escaped; unescape it & interpret as JSON object
+            data = json.loads('{' + data.encode('utf8').decode('unicode_escape') + '}')
+
+            if data['fileType'] == 'd':
+                # recur into subdirectory
+                self.open_tab()
+                yield from self.yield_walk_files(data['filePath'])
+                self.close_tab()
+            elif data['fileType'] == 'f':
+                url = el.find_by_tag('a')[0]._element.get_attribute('href')
+                profile = el._element.find_element_by_class_name('yg-list-auth').text
+                date_str = el._element.find_element_by_class_name('yg-list-date').text
+                the_date = dateutil.parser.parse(date_str)
+
+                yield {
+                    'filePath': urllib.parse.unquote(data['filePath']),
+                    'url': url,
+                    'mime': data['mime'],
+                    'size': float(data['size']),
+                    'profile': profile,
+                    'date': the_date,
+                }
+            else:
+                raise NotImplementedError("Unknown fileType %s, data was %s" % (
+                    data['fileType'], json.dumps(data),
+                ))
+
 
 def message_author(msg, include_email, hide_email=True):
     """Return a formatted message author from a msg object."""
@@ -290,7 +389,7 @@ def message_author(msg, include_email, hide_email=True):
     return res
 
 
-def scrape_all(arguments):
+def scrape_messages(arguments):
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
     scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
@@ -323,6 +422,24 @@ def scrape_all(arguments):
     eprint("All messages from the beginning up to #%s have been scraped!" % (last_message,))
 
 
+def scrape_files(arguments):
+    cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
+    db = YahooBackupDB(cli, arguments['<group_name>'])
+    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
+
+    for file_info in scraper.yield_walk_files():
+        import pprint; pprint.pprint(file_info)
+        if not db.has_file_entry(file_info['filePath']) or not db.has_file_data(file_info['filePath']):
+            eprint("Inserting file '%s'..." % file_info['filePath'])
+            file_data = requests.get(file_info['url']).content
+            db.upsert_file_entry(file_info)
+            db.update_file_data(file_info['filePath'], file_data)
+        else:
+            eprint("Already had file '%s'" % file_info['filePath'])
+
+    eprint("Done processing all files!")
+
+
 def dump_site(arguments):
     # helpers
     import datetime
@@ -341,10 +458,30 @@ def dump_site(arguments):
         sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
     messages_subdir = "messages"
+    files_subdir = "files"
 
     # make the paths
     os.makedirs(root_dir)
     os.makedirs(os.path.join(root_dir, messages_subdir))
+    os.makedirs(os.path.join(root_dir, files_subdir))
+
+    # dump files
+    def sanitize_filename(fn):
+        return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
+
+    eprint("Dumping all files...")
+    for ent, file_f in db.yield_all_files():
+        if file_f is None:
+            eprint("Skipping '%s', have no data for this file..." % (ent['_id'],))
+            continue
+
+        # split to pieces, ignore first empty piece, sanitize each piece, put back together
+        sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
+        full_path = os.path.join(root_dir, files_subdir, sanitized)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as f:
+            for chunk in file_f:
+                f.write(chunk)
 
     loader = jinja2.FileSystemLoader(searchpath="./templates/")
     env = jinja2.Environment(loader=loader)
@@ -413,7 +550,9 @@ if __name__ == "__main__":
     except schema.SchemaError as e:
         sys.exit(e.code)
 
-    if arguments['scrape_all']:
-        scrape_all(arguments)
+    if arguments['scrape_messages']:
+        scrape_messages(arguments)
+    elif arguments['scrape_files']:
+        scrape_files(arguments)
     elif arguments['dump_site']:
         dump_site(arguments)

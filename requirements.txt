@@ -1,6 +1,9 @@
-docopt
-jinja2
-pymongo
-pyyaml
-schema
-splinter
+docopt==0.6.2
+jinja2==2.8
+pymongo==3.2.2
+python-dateutil==2.5.3
+pyyaml==3.11
+requests==2.10.0
+schema==0.5.0
+selenium==2.53.5
+splinter==0.7.3
