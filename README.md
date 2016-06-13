@@ -15,9 +15,13 @@ The project requires Python 3, Mongo, and a computer with a GUI as Selenium is u
 
 To scrape an entire site, say the `concatenative` group:
 
-    ./yahoo-groups-backup.py scrape_all concatenative
+    ./yahoo-groups-backup.py scrape_messages concatenative
 
 This will shove all the messages into a Mongo database (default `localhost:27017`), into the database of the same name as the group.
+
+To scrape the files as well (though this group has no files):
+
+    ./yahoo-groups-backup.py scrape_files concatenative
 
 To dump the site as a human-friendly, fully static (i.e. viewable from the file system) website:
 
@@ -30,14 +34,16 @@ Then simply open `concatenative_static_site/index.html` and browse!
 Yahoo! Groups backup scraper.
 
 Usage:
-  yahoo-groups-backup.py scrape_all [options] <group_name>
+  yahoo-groups-backup.py scrape_messages [options] <group_name>
+  yahoo-groups-backup.py scrape_files [options] <group_name>
   yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
 
 Commands:
-  scrape_all     Scrape the entire group and insert it into the mongo database
-  dump_site      Dump the entire backup as a static website at the given root
-                 directory
+  scrape_messages     Scrape all group messages that are not scraped yet and insert it into the mongo database
+  scrape_files        Scrape the group files and insert them into the mongo database
+  dump_site           Dump the entire backup as a static website at the given root
+                      directory
 
 Options:
   -h --help                                   Show this screen
@@ -51,4 +57,5 @@ Options:
   [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
   --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
   --mongo-port=<port>                         Port for mongo database [default: 27017]
+
 ```
