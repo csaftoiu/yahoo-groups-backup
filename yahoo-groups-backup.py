@@ -32,6 +32,7 @@ import json
 import os
 import platform
 import random
+import re
 import sys
 import time
 import urllib.parse
@@ -285,6 +286,19 @@ class YahooBackupScraper:
         if data['from'] == 'no_reply@yahoogroups.com':
             data['from'] = None
 
+        # authorName may have weird encoding - try to fix it
+        match_hex = r"=([0-9a-f]{2})"
+        if data['authorName'] and re.search(match_hex, data['authorName']):
+            try:
+                orig = data['authorName']
+                as_ascii = orig.encode('ascii')
+                subbed = re.sub(match_hex.encode('ascii'), lambda m: bytes([int(m.groups(1)[0], 16)]), as_ascii)
+                data['authorName'] = subbed.decode('utf8')
+                eprint("Interpreted '%s' as '%s'" % (orig, data['authorName']))
+            except (UnicodeDecodeError, UnicodeEncodeError):
+                eprint("Failed to interpret '%s' as equal-sign-plus-hex-encoded utf8" % repr(data['authorName']))
+                # not a serious error, just continue
+
         return data
 
     def get_message(self, message_number):
@@ -374,17 +388,27 @@ class YahooBackupScraper:
 
 def message_author(msg, include_email, hide_email=True):
     """Return a formatted message author from a msg object."""
-    if msg['authorName'] and msg['authorName'] != msg['profile']:
-        res = "%s (%s)" % (msg['authorName'], msg['profile'])
-    else:
-        res = "%s" % (msg['profile'],)
+    email = msg['from']
+    if hide_email and email:
+        email = msg['from'].rsplit("@", 1)[0] + "@..."
+    email = "<%s>" % email
 
-    if include_email and msg['from']:
-        if hide_email:
-            disp = msg['from'].rsplit("@", 1)[0] + "@..."
+    if msg['authorName'] and msg['profile']:
+        if msg['authorName'] == msg['profile']:
+            res = msg['authorName']
         else:
-            disp = msg['from']
-        res += " <%s>" % disp
+            res = "%s (%s)" % (msg['authorName'], msg['profile'])
+    elif msg['authorName']:
+        res = msg['authorName']
+    elif msg['profile']:
+        res = msg['profile']
+    elif msg['from']:
+        return email
+    else:
+        return "???"
+
+    if include_email and email:
+        res += " %s" % email
 
     return res
 
