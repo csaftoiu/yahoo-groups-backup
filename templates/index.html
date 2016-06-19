@@ -3,8 +3,8 @@
 {% block head %}
   <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet">
   <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.js"></script>
   <style>
     td {
       word-break: break-all;
@@ -38,23 +38,9 @@
       <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
       <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Date</th>
       <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
-      <th>Raw Number</th>
     </tr>
     </thead>
     <tbody>
-    {% for message in messages %}
-    <tr class="row" data-message="{{ message._id }}">
-      <td class="col-xs-4  col-sm-4 col-md-5 col-lg-6">
-        <a href="./messages/{{ message._id }}.html" target="_blank">{{ message.subject }}</a><br>
-      </td>
-      <td class="col-xs-4  col-sm-3 col-md-3 col-lg-3">{{ get_display_name(message, include_email=False) }}</td>
-      <td class="col-xs-4  col-sm-3 col-md-3 col-lg-2">{{ get_formatted_date(message) }}</td>
-      <td class="hidden-xs col-sm-2 col-md-1 col-lg-1">
-        <a href="./messages/{{ message._id }}.html" target="_blank">{{ message._id }}</a>
-      </td>
-      <td>{{ message._id }}</td>
-    </tr>
-    {% endfor %}
     </tbody>
   </table>
   </div>
@@ -63,7 +49,7 @@
 </div><!-- /.container -->
 
   <script type="text/javascript">
-    var currentHighlight = null;
+    /*var currentHighlight = null;
 
     function goToMessageNumber(number) {
       // NOTE, only works on unsorted/unfiltered table!
@@ -102,7 +88,7 @@
         if (!results) return null;
         if (!results[2]) return '';
         return decodeURIComponent(results[2].replace(/\+/g, " "));
-    }
+    }*/
 
     $(document).ready(function() {
       // initialize table
@@ -115,14 +101,38 @@
            "<'row'<'col-sm-5'i><'col-sm-7'p>>",
         "lengthMenu": [ [ 10, 25, 50, 100, 1000, 5000, -1 ], [ 10, 25, 50, 100, 1000, 5000, "All" ]],
         "pagingType": "simple_numbers",
-        "columnDefs": [
-          {
-            "targets": [4],
-            "visible": false,
-            "searchable": false
-          }
-        ]
+        "ajax": function (data, callback, settings) {
+          console.log("ajax called");
+          callback({'data': [
+            {"s":"Re: [actualfreedom] Letting the cat out of the bag - Here be perfection","a":"andrewactually","d":"Jun-19-16, 08:20 AM","i":22849},
+            {"s":"Re: &#39;I&#39; really am rotten to the core","a":"srinathjellybaby","d":"Jun-19-16, 05:06 AM","i":22848},
+            {"s":"Re: &#39;I&#39; really am rotten to the core","a":"Alan (alan_ji)","d":"Jun-19-16, 04:53 AM","i":22847},
+            {"s":"Re: [actualfreedom] Letting the cat out of the bag - Here be perfection","a":"srinathjellybaby","d":"Jun-19-16, 04:52 AM","i":22846},
+            {"s":"Re: [actualfreedom] Sincerity is the Key","a":"alan_ji","d":"Jun-19-16, 04:47 AM","i":22845},
+            {"s":"Re: &#39;I&#39; really am rotten to the core","a":"srinathjellybaby","d":"Jun-19-16, 04:35 AM","i":22844},
+            {"s":"Re: [actualfreedom] Letting the cat out of the bag - Here be perfection","a":"andrewactually","d":"Jun-19-16, 01:50 AM","i":22843},
+            {"s":"Re: [actualfreedom] Letting the cat out of the bag - Here be perfection","a":"srinathjellybaby","d":"Jun-19-16, 01:08 AM","i":22842},
+            {"s":"Re: [actualfreedom] The Legacy of Pragmatic Dharma","a":"Alan (alan_ji)","d":"Jun-18-16, 07:20 PM","i":22841},
+            {"s":"Re: [actualfreedom] Sincerity is the Key","a":"hunterad93","d":"Jun-18-16, 03:54 PM","i":22840},
+            {"s":"Re: [actualfreedom] Sincerity is the Key","a":"Claudiu (laxori666)","d":"Jun-18-16, 09:15 AM","i":22839},
+            {"s":"Re: [actualfreedom] Sincerity is the Key","a":"Craig Nichols (myfragileego)","d":"Jun-18-16, 01:23 AM","i":22838}
+          ]});
+          console.log("callback returned");
+        },
+        "columns": [
+          {"data": "s", "className": "col-xs-4  col-sm-4 col-md-5 col-lg-6"},
+          {"data": "a", "className": "col-xs-4  col-sm-3 col-md-3 col-lg-3"},
+          {"data": "d", "className": "col-xs-4  col-sm-3 col-md-3 col-lg-2"},
+          {"data": "i", "className": "hidden-xs col-sm-2 col-md-1 col-lg-1"}
+        ],
+        "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+          $(nRow).addClass('row');
+        }
       });
+/*      <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
+      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
+      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Date</th>
+      <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>*/
 
       /*// insert 'go-to-message' DOM
       $("div.go-to-message").html(
@@ -132,13 +142,13 @@
               "</label>"
       );*/
 
-      // select message if specified
+      /*// select message if specified
       var selectMessage = getParameterByName('select-message');
       if (selectMessage != null) {
-        /*$("#select-message").val(selectMessage);
-        updateSelectMessage();*/
+        // $("#select-message").val(selectMessage);
+        // updateSelectMessage();
         goToMessageNumber(selectMessage);
-      }
+      }*/
 
       /*// clicking on table row also selects message
       $("#messages tbody").on('click', 'tr', function () {
@@ -150,6 +160,6 @@
       $('#loading').css('display', 'none');
       $('#table-container').css('display', 'initial');
 
-    })
+    });
   </script>
 {% endblock %}

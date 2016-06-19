@@ -395,6 +395,7 @@ def scrape_messages(arguments):
     scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
 
     skipped = [0]
+
     def print_skipped(min):
         if skipped[0] >= min:
             eprint("Skipped %s messages we already processed" % skipped[0])
@@ -489,6 +490,12 @@ def dump_site(arguments):
     env.globals['get_display_name'] = lambda *a, **kw: jinja2.escape(message_author(*a, **kw))
     env.globals['get_formatted_date'] = get_formatted_date
 
+    def JSON_stringify(o):
+        if isinstance(o, jinja2.runtime.Undefined):
+            o = None
+        return json.dumps(o)
+    env.filters['JSON_stringify'] = JSON_stringify
+
     def render_to_file(filename, template, template_args):
         if 'path_to_root' not in template_args:
             raise ValueError("template_args must contain 'path_to_root'")
@@ -505,32 +512,37 @@ def dump_site(arguments):
         ))
         eprint("")
 
-    eprint("Rendering index...")
-    render_to_file('index.html', 'index.html', {
+    eprint("Rendering index data...")
+    render_to_file('data.index.js', 'data.index.js', {
         'path_to_root': '.',
         'messages': db.yield_all_messages(),
     })
 
-    eprint("Rendering about page...")
-    render_to_file('about.html', 'about.html', {
+    eprint("Rendering index...")
+    render_to_file('index.html', 'index.html', {
         'path_to_root': '.',
-        'last_message_date': get_formatted_date(db.get_latest_message()),
     })
 
-    num_messages = db.num_messages()
-    eprint("Rendering %d messages..." % num_messages)
-    for i, msg in enumerate(db.yield_all_messages()):
-        if i % 1000 == 0:
-            eprint("    %d/%d..." % (i+1, num_messages))
-        render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
-            'path_to_root': '..',
-            'message': msg,
-        })
+    # eprint("Rendering about page...")
+    # render_to_file('about.html', 'about.html', {
+    #     'path_to_root': '.',
+    #     'last_message_date': get_formatted_date(db.get_latest_message()),
+    # })
+    #
+    # num_messages = db.num_messages()
+    # eprint("Rendering %d messages..." % num_messages)
+    # for i, msg in enumerate(db.yield_all_messages()):
+    #     if i % 1000 == 0:
+    #         eprint("    %d/%d..." % (i+1, num_messages))
+    #     render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
+    #         'path_to_root': '..',
+    #         'message': msg,
+    #     })
 
     eprint("Site is ready in '%s'!" % root_dir)
 
 
-if __name__ == "__main__":
+def main():
     arguments = docopt(__doc__, version='Yahoo! Groups Backup-er 0.1')
 
     if arguments['--config'] != 'settings.yaml' and not os.path.exists(arguments['--config']):
@@ -560,3 +572,7 @@ if __name__ == "__main__":
         scrape_files(arguments)
     elif arguments['dump_site']:
         dump_site(arguments)
+
+
+if __name__ == "__main__":
+    main()
