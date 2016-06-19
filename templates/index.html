@@ -24,194 +24,213 @@
     <h1>{{ group_name }} Yahoo! Group Backup</h1>
   </div>
 
+  <!-- content div - start display as 'none' in case of no scripting enabled -->
   <div id="content" style="display: none;">
-  <div id="loading">
-    <div class="text-center">
-    <br>
-    <p class="lead">Loading messages...</p>
-    <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
-    </div>
-  </div>
-  <div id="table-container" style="display: none;">
-  <table id="messages" class="table table-hover table-bordered" cellspacing="0" width="100%">
-    <thead>
-    <tr class="row">
-      <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
-      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
-      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
-      <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
-    </tr>
-    </thead>
-    <tbody>
-    </tbody>
-  </table>
-  </div>
-  <br>
-  </div>
 
+    <!-- index page -->
+    <div id="index">
+      <div id="loading">
+        <div class="text-center">
+        <br>
+        <p class="lead">Loading messages...</p>
+        <p class="lead">(Browser may appear stuck for a few seconds.)</p>
+        <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
+        </div>
+      </div>
+      <div id="table-container" style="display: none;">
+      <table id="messages" class="table table-hover table-bordered" cellspacing="0" width="100%">
+        <thead>
+        <tr class="row">
+          <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
+          <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
+          <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
+          <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+      </div>
+      <br>
+    </div>
+
+    <!-- message page -->
+    <div id="message" style="display: none;">
+    </div>
+  </div> <!-- /content -->
+
+  <!-- noscript message -->
   <div id="noscript">
     <div class="text-center">
       <p class="lead">You must enable JavaScript to use this static website.</p>
     </div>
   </div>
 
-  <script>
-    document.getElementById('noscript').style.display = 'none';
-    document.getElementById('content').style.display = 'initial';
-  </script>
+</div><!-- /container -->
 
-</div><!-- /.container -->
+<script type="text/javascript">
+  // "jsonp" hooks
+  var currentHook = null;
+  function dataLoaded(data) {
+    if (!currentHook) {
+      console.error("Data loaded without a hook!");
+    }
+    currentHook(data);
+    currentHook = null;
+  }
+  /**
+   * Load a (potentially) local JS file using the <script> tag trick.
+   * The local file should be JavaScript code which calls dataLoaded() with the data.
+   * `callback` will be called on success. The entire app will break on failure.
+   */
+  function loadLocalJS(path, callback) {
+    currentHook = callback;
 
-  <script type="text/javascript">
-    // "jsonp" hooks
-    var currentHook = null;
-    function dataLoaded(data) {
-      if (!currentHook) {
-        console.error("Data loaded without a hook!");
+    var script = document.createElement('script');
+    script.src = path;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  // message highlighting
+  /*var currentHighlight = null;
+
+  function goToMessageNumber(number) {
+    // NOTE, only works on unsorted/unfiltered table!
+    var table = $('#messages').DataTable();
+
+    // remove current highlight
+    if (currentHighlight) {
+      $(table.row(currentHighlight).nodes()).removeClass('highlight');
+    }
+
+    var index = table.column(4).data().indexOf(''+number);
+    if (index === -1) {
+      return;
+    }
+
+    currentHighlight = index;
+
+    // add new highlight
+    $(table.row(currentHighlight).nodes()).addClass('highlight');
+
+    // go to page
+    var page = Math.floor(currentHighlight / table.page.len());
+    table.page(page).draw(false);
+  }
+
+  function updateSelectMessage() {
+    var messageNumber = parseInt($("#select-message").val());
+    goToMessageNumber(messageNumber);
+  }
+
+  function getParameterByName(name, url) {
+      if (!url) url = window.location.href;
+      name = name.replace(/[\[\]]/g, "\\$&");
+      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+          results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
+  }*/
+
+  function initializeIndexTable()
+  {
+    // show timezone in header
+    $("#tz").html(" (" + (new Date()).format("Z") + ")");
+    // initialize table
+    var table = $('#messages').DataTable({
+      // set up the display
+      "dom":
+         "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
+         "<'row'<'col-sm-5 go-to-message'><'col-sm-7'p>>" +
+         "<'row'<'col-sm-12'tr>>" +
+         "<'row'<'col-sm-5'i><'col-sm-7'p>>",
+      "pagingType": "simple_numbers",
+      "lengthMenu": [ [ 10, 25, 50, 100 ], [ 10, 25, 50, 100 ]],
+      // data source is a local .js file with the index data
+      "ajax": function (data, callback, settings) {
+        console.log("ajax called");
+        loadLocalJS('data.index.js', function (data) {
+          console.log("Data loaded! Calling DataTables callback...");
+          callback({'data': data});
+        });
+      },
+      // initially sort by descending message id
+      "order": [[ 3, "desc" ]],
+      // column defs:
+      // - data source
+      // - bootstrap grid
+      // - render links, dates, etc.
+      "columns": [
+        {
+          "data": "s",
+          "className": "col-xs-4  col-sm-4 col-md-5 col-lg-6"
+        },
+        {
+          "data": "a",
+          "className": "col-xs-4  col-sm-3 col-md-3 col-lg-3"
+        },
+        {
+          "data": "d",
+          "className": "col-xs-4  col-sm-3 col-md-3 col-lg-2",
+          "render": function (data, type, row, meta) {
+            // sort by timestamp
+            if (type === 'sort') {
+              return data;
+            }
+
+            // otherwise - display or filter the date in local time
+            return (new Date(data * 1000)).format("mmm d, yyyy h:MM TT");
+          }
+        },
+        {
+          "data": "i",
+          "className": "hidden-xs col-sm-2 col-md-1 col-lg-1"
+        }
+      ],
+      // add bootstrap grid style to rows
+      "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+        $(nRow).addClass('row');
+      },
+      "initComplete": function (settings, json) {
+        console.log("Initialization complete!");
+        // show table
+        $('#loading').css({'display': 'none'});
+        $('#table-container').css({'display': ''});
       }
-      currentHook(data);
-      currentHook = null;
-    }
-    /**
-     * Load a (potentially) local JS file using the <script> tag trick.
-     * The local file should be JavaScript code which calls dataLoaded() with the data.
-     * `callback` will be called on success. The entire app will break on failure.
-     */
-    function loadLocalJS(path, callback) {
-      currentHook = callback;
+    });
 
-      var script = document.createElement('script');
-      script.src = path;
-      document.getElementsByTagName('head')[0].appendChild(script);
-    }
+    /*// insert 'go-to-message' DOM
+    $("div.go-to-message").html(
+            "<label>Go to #: " +
+            "<input id='select-message' class='form-control input-sm' placeholder='21345'>" +
+            "<button class='btn btn-sm btn-primary' onclick='updateSelectMessage()'>Go</button>" +
+            "</label>"
+    );*/
 
-    /*var currentHighlight = null;
-
-    function goToMessageNumber(number) {
-      // NOTE, only works on unsorted/unfiltered table!
-      var table = $('#messages').DataTable();
-
-      // remove current highlight
-      if (currentHighlight) {
-        $(table.row(currentHighlight).nodes()).removeClass('highlight');
-      }
-
-      var index = table.column(4).data().indexOf(''+number);
-      if (index === -1) {
-        return;
-      }
-
-      currentHighlight = index;
-
-      // add new highlight
-      $(table.row(currentHighlight).nodes()).addClass('highlight');
-
-      // go to page
-      var page = Math.floor(currentHighlight / table.page.len());
-      table.page(page).draw(false);
-    }
-
-    function updateSelectMessage() {
-      var messageNumber = parseInt($("#select-message").val());
-      goToMessageNumber(messageNumber);
-    }
-
-    function getParameterByName(name, url) {
-        if (!url) url = window.location.href;
-        name = name.replace(/[\[\]]/g, "\\$&");
-        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-            results = regex.exec(url);
-        if (!results) return null;
-        if (!results[2]) return '';
-        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    /*// select message if specified
+    var selectMessage = getParameterByName('select-message');
+    if (selectMessage != null) {
+      // $("#select-message").val(selectMessage);
+      // updateSelectMessage();
+      goToMessageNumber(selectMessage);
     }*/
 
-    $(document).ready(function() {
-      // show timezone in header
-      $("#tz").html(" (" + (new Date()).format("Z") + ")");
-      // initialize table
-      var table = $('#messages').DataTable({
-        // set up the display
-        "dom":
-           "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
-           "<'row'<'col-sm-5 go-to-message'><'col-sm-7'p>>" +
-           "<'row'<'col-sm-12'tr>>" +
-           "<'row'<'col-sm-5'i><'col-sm-7'p>>",
-        "pagingType": "simple_numbers",
-        "lengthMenu": [ [ 10, 25, 50, 100 ], [ 10, 25, 50, 100 ]],
-        // data source is a local .js file with the index data
-        "ajax": function (data, callback, settings) {
-          console.log("ajax called");
-          loadLocalJS('data.index.js', function (data) {
-            console.log("Data loaded! Calling DataTables callback...");
-            callback({'data': data});
-          });
-        },
-        // initially sort by descending message id
-        "order": [[ 3, "desc" ]],
-        // column defs:
-        // - data source
-        // - bootstrap grid
-        // - render links, dates, etc.
-        "columns": [
-          {
-            "data": "s",
-            "className": "col-xs-4  col-sm-4 col-md-5 col-lg-6"
-          },
-          {
-            "data": "a",
-            "className": "col-xs-4  col-sm-3 col-md-3 col-lg-3"
-          },
-          {
-            "data": "d",
-            "className": "col-xs-4  col-sm-3 col-md-3 col-lg-2",
-            "render": function (data, type, row, meta) {
-              // sort by timestamp
-              if (type === 'sort') {
-                return data;
-              }
-// return dt.strftime("%b-%d-%y, %I:%M %p")
-              // otherwise display the date in local time
-              return (new Date(data * 1000)).format("mmm d, yyyy h:MM TT");
-            }
-          },
-          {
-            "data": "i",
-            "className": "hidden-xs col-sm-2 col-md-1 col-lg-1"
-          }
-        ],
-        // add bootstrap grid style to rows
-        "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
-          $(nRow).addClass('row');
-        },
-        "initComplete": function (settings, json) {
-          console.log("Initialization complete!");
-          // show table
-          $('#loading').css('display', 'none');
-          $('#table-container').css('display', 'initial');
-        }
-      });
-      /*// insert 'go-to-message' DOM
-      $("div.go-to-message").html(
-              "<label>Go to #: " +
-              "<input id='select-message' class='form-control input-sm' placeholder='21345'>" +
-              "<button class='btn btn-sm btn-primary' onclick='updateSelectMessage()'>Go</button>" +
-              "</label>"
-      );*/
+    /*// clicking on table row also selects message
+    $("#messages tbody").on('click', 'tr', function () {
+      $("#select-message").val($(this).data("message"));
+      updateSelectMessage();
+    });*/
+  }
 
-      /*// select message if specified
-      var selectMessage = getParameterByName('select-message');
-      if (selectMessage != null) {
-        // $("#select-message").val(selectMessage);
-        // updateSelectMessage();
-        goToMessageNumber(selectMessage);
-      }*/
+  // index - loading
+  $(document).ready(function() {
+    // show javascript-only content
+    $("#noscript").css({"display": "none"});
+    $("#content").css({"display": ""});
 
-      /*// clicking on table row also selects message
-      $("#messages tbody").on('click', 'tr', function () {
-        $("#select-message").val($(this).data("message"));
-        updateSelectMessage();
-      });*/
-    });
-  </script>
+    // after page re-render, load the table
+    setTimeout(initializeIndexTable, 0);
+  });
+</script>
 {% endblock %}
