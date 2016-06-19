@@ -26,36 +26,52 @@
 
   <!-- js - modules -->
   <script type="text/javascript" src="./modules/app.js"></script>
+  <script type="text/javascript" src="./modules/nav.js"></script>
 
 </head>
+
 <body ng-app="staticyahoo.app" style="padding-top: 50px;">
 
-<div class="navbar navbar-inverse navbar-fixed-top">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="./index.html">Yahoo! Groups Backup</a>
+  <!-- submodules - nav.html -->
+  <script type="text/ng-template" id="modules/nav/nav.html">
+    <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="./index.html">Yahoo! Groups Backup</a>
+        </div>
+        <div class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li ng-repeat="nav in navs">
+              <a href="#">{{ nav.text }}</a>
+            </li>
+          </ul>
+
+          <!--{% set navigation = [
+              ('index.html', 'index', 'Index'),
+              ('files', 'files', 'Files'),
+              ('about.html', 'about', 'About'),
+          ] %}
+          {% set active_page = active_page|default('index') %}
+          <ul class="nav navbar-nav">
+            {% for href, id, caption in navigation %}
+              <li {% if id == active_page %} class="active" {% endif %}>
+                <a href="{{ path_to_root }}/{{ href }}">{{ caption  }}</a>
+              </li>
+            {% endfor %}
+          </ul>-->
+        </div><!--/.nav-collapse -->
+      </div>
     </div>
-    <div class="collapse navbar-collapse">
-      <!--{% set navigation = [
-          ('index.html', 'index', 'Index'),
-          ('files', 'files', 'Files'),
-          ('about.html', 'about', 'About'),
-      ] %}
-      {% set active_page = active_page|default('index') %}
-      <ul class="nav navbar-nav">
-        {% for href, id, caption in navigation %}
-          <li {% if id == active_page %} class="active" {% endif %}>
-            <a href="{{ path_to_root }}/{{ href }}">{{ caption  }}</a>
-          </li>
-        {% endfor %}
-      </ul>-->
-    </div><!--/.nav-collapse -->
-  </div>
-</div>
+  </script>
+
+  <!-- actual site -->
+
+  <div ng-include="'modules/nav/nav.html'"></div>
+
 </body>
 </html>

@@ -2,7 +2,7 @@
 
 angular
   .module('staticyahoo.app', [
-
+    'staticyahoo.nav'
   ])
 
   .run(function () {
