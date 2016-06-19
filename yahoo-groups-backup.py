@@ -545,6 +545,10 @@ if __name__ == "__main__":
             arguments['--%s' % key] = val
         arguments.update(command_line_args)
 
+    # set default login & password
+    arguments.setdefault('--login', None)
+    arguments.setdefault('--password', None)
+
     try:
         arguments = args_schema.validate(arguments)
     except schema.SchemaError as e:
