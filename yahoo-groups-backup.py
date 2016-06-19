@@ -26,7 +26,7 @@ Options:
   [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
   --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
   --mongo-port=<port>                         Port for mongo database [default: 27017]
-  --driver=<driver>                           Specify a webdriver for Selenium
+  --driver=<driver>                           Specify a webdriver for Selenium [default: firefox]
 
 """
 import json
@@ -547,10 +547,6 @@ if __name__ == "__main__":
         for key, val in settings.items():
             arguments['--%s' % key] = val
         arguments.update(command_line_args)
-
-    # set default driver
-    if not arguments['--driver']:
-        arguments['--driver'] = 'firefox'
 
     # set default login & password
     arguments.setdefault('--login', None)
