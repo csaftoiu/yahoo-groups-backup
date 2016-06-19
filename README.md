@@ -77,8 +77,8 @@ get the data, with raw content, for the given message
 
 All the message data from the API is combined and inserted into a mongo
 database with the same name as the group. Data is stored as returned
-from the API except the message id is stored into the `_id` field. 
-
+from the API except the message id is stored into the `_id` field.
+ 
 ### Scraping - Files
 
 Files are scraped through the human-consumable interface (i.e. the website) 
