@@ -26,6 +26,7 @@ Options:
   [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
   --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
   --mongo-port=<port>                         Port for mongo database [default: 27017]
+  --driver=<driver>                           Specify a webdriver for Selenium
 
 """
 import json
@@ -184,13 +185,13 @@ class YahooBackupScraper:
     """Scrape Yahoo! Group messages with Selenium. Login information is required for
     private groups."""
 
-    def __init__(self, group_name, login_email=None, password=None, delay=1):
+    def __init__(self, group_name, driver, login_email=None, password=None, delay=1):
         self.group_name = group_name
         self.login_email = login_email
         self.password = password
         self.delay = delay
 
-        self.br = splinter.Browser()
+        self.br = splinter.Browser(driver)
 
     def __del__(self):
         self.br.quit()
@@ -392,7 +393,8 @@ def message_author(msg, include_email, hide_email=True):
 def scrape_messages(arguments):
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
-    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
+    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--driver'], arguments['--login'],
+                                 arguments['--password'])
 
     skipped = [0]
     def print_skipped(min):
@@ -425,7 +427,8 @@ def scrape_messages(arguments):
 def scrape_files(arguments):
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
-    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--login'], arguments['--password'])
+    scraper = YahooBackupScraper(arguments['<group_name>'], arguments['--driver'], arguments['--login'],
+                                 arguments['--password'])
 
     for file_info in scraper.yield_walk_files():
         import pprint; pprint.pprint(file_info)
@@ -544,6 +547,10 @@ if __name__ == "__main__":
         for key, val in settings.items():
             arguments['--%s' % key] = val
         arguments.update(command_line_args)
+
+    # set default driver
+    if not arguments['--driver']:
+        arguments['--driver'] = 'firefox'
 
     # set default login & password
     arguments.setdefault('--login', None)
