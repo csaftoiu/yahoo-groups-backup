@@ -273,9 +273,26 @@ class YahooBackupScraper:
                 assert stripped_name.endswith("&quot;")
                 stripped_name = stripped_name[6:-6].strip()
 
-            # if we have a weird encoding thing then forget it
+            # check that the stripped names match
+            # but if we have a weird encoding thing then forget it
             if not stripped_name.startswith("=?"):
-                assert stripped_name.strip() == data['authorName'].strip()
+                if stripped_name.startswith("&quot;"):
+                    assert stripped_name.endswith("&quot;")
+                    stripped_name = stripped_name[6:-6].strip()
+
+                check_authorname = data['authorName'].strip()
+                # if we have an email, ignore the domain
+                if '@' in stripped_name:
+                    assert '@' in data['authorName']
+                    stripped_name = stripped_name.split('@', 1)[0].strip()
+                    check_authorname = check_authorname.split('@', 1)[0].strip()
+
+                assert (
+                    stripped_name == check_authorname.strip(),
+                    "Stripped name %s didn't match author name %s (check name was %s)" % (
+                        stripped_name, data['authorName'], check_authorname,
+                    )
+                )
 
             # leave only the email in
             data['from'], leftover = from_remainder.split('&gt;', 1)
