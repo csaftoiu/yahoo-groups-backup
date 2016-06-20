@@ -97,7 +97,7 @@ stored as a separate .js file and loaded with "jsonp" (i.e. appending
 a script tag to the document). This allows us to essentially load 
 data from the local filesystem.
 
-The messages themselves are stored in batches of 1000 messages and 
+The messages themselves are stored in batches of `n` messages (default 500) and 
 loaded on-demand. 
 
 The app is a single-page app, which takes a few seconds to load if there
@@ -105,8 +105,8 @@ are a lot of messages, due to the index. However, once loaded, the
 index is retained in memory and browsing is smooth. 
 
 A site is "dumped" by copying everything but the data from the
-`static_site_template` directory, and rendering the data for the
-particular group using Jinja2. 
+`static_site_template` directory, and rendering the necessary data into
+jsonp files.
 
 The `static_site_template` directory contains the template for the
 static site. `data` contains sample data from the 
