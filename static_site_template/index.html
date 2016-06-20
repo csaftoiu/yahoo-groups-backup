@@ -46,33 +46,6 @@
 
   </script>
 
-  <script type="text/ng-template" id="./modules/index.html">
-
-    <div ng-show="!messageIndexLoaded">
-      <div class="text-center">
-      <br>
-      <p class="lead">Loading messages...</p>
-      <p class="lead">(Browser may appear stuck for a few seconds.)</p>
-      <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
-      </div>
-    </div>
-    <div ng-show="messageIndexLoaded">
-    <table id="messageIndexTable" class="table table-hover table-bordered" cellspacing="0" width="100%">
-      <thead>
-      <tr class="row">
-        <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
-        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
-        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
-        <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
-      </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-    </div>
-
-  </script>
-
   <script type="text/ng-template" id="./modules/files.html">
     <br>
     <div class="text-center">
@@ -115,6 +88,30 @@
     <h1 ng-if="!config.groupName">Yahoo! Group Backup</h1>
   </div>
 
+  <div ng-controller="IndexCtrl" ng-show="showMessageIndex">
+    <div ng-show="!messageIndexLoaded">
+      <div class="text-center">
+      <br>
+      <p class="lead">Loading messages...</p>
+      <p class="lead">(Browser may appear stuck for a few seconds.)</p>
+      <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
+      </div>
+    </div>
+    <div ng-show="messageIndexLoaded">
+    <table id="messageIndexTable" class="table table-hover table-bordered" cellspacing="0" width="100%">
+      <thead>
+      <tr class="row">
+        <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
+        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
+        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
+        <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
+      </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    </div>
+  </div>
   <section ui-view></section>
   </div>
 

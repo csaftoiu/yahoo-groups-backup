@@ -8,9 +8,14 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
     $stateProvider
 
+      // only show/hide the message index
       .state('index', {
-        templateUrl: './modules/index.html',
-        controller: 'IndexCtrl'
+        onEnter: function ($rootScope) {
+          $rootScope.showMessageIndex = true;
+        },
+        onExit: function ($rootScope) {
+          $rootScope.showMessageIndex = false;
+        }
       })
 
       .state('files', {
