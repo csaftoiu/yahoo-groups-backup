@@ -119,23 +119,24 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
 
   })
 
-  .controller('MessageCtrl', function ($scope, $stateParams, MessageData) {
+  .controller('MessageCtrl', function ($rootScope, $scope, $filter, $stateParams, $sce, MessageData) {
     console.log($stateParams.id);
+
+    $scope.headers = [];
+    $scope.message = {};
 
     MessageData.getMessageData($stateParams.id).then(function (msgData) {
       console.log(msgData);
+
+      $scope.headers = [
+        {name: "From", value: msgData.a},
+        {name: "Date", value: $filter('date')(msgData.d * 1000, $rootScope.dateFormat)},
+        {name: "Subject", value: msgData.s}
+      ];
+      $scope.message = {
+        messageBody: $sce.trustAsHtml(msgData.b)
+      };
     });
-
-    $scope.headers = [];
-
-    $scope.message = {};
-
-/*    {% set headers = [
-      ("From:", get_display_name(message, include_email=True)),
-      ("Date:", get_formatted_date(message)),
-      ("Subject:", message.subject),
-    ]
-    %}*/
 
   })
 
