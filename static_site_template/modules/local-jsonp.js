@@ -15,15 +15,19 @@ angular.module('staticyahoo.local-jsonp', [])
    */
   .factory('LocalJSONP', function ($q) {
 
-    var currentHook = null;
+    var state = {
+      path: null,
+      hook: null,
+      promise: null
+    };
 
     var dataLoaded = function (data) {
-      if (!currentHook) {
+      if (!state.hook) {
         console.error("Data loaded without a hook!");
       }
 
-      currentHook(data);
-      currentHook = null;
+      state.hook(data);
+      state.hook = null;
     };
 
     /**
@@ -32,27 +36,54 @@ angular.module('staticyahoo.local-jsonp', [])
      * `callback` will be called on success. The entire app will break on failure.
      */
     var loadLocalJS = function (path, callback) {
-      currentHook = callback;
+      state.hook = callback;
 
       var script = document.createElement('script');
       script.src = path;
       document.getElementsByTagName('head')[0].appendChild(script);
     };
 
-    var result = function (path) {
+    var LocalJSONP = function (path) {
       var deferred = $q.defer();
+
+      if (state.promise) {
+        console.log("Waiting for '" + state.path + "' to finish loading first...");
+
+        state.promise.then(function (data) {
+          console.log("Current path finished, now loading '" + path + "'...");
+          LocalJSONP(path).then(function (data) {
+            deferred.resolve(data);
+            return data;
+          });
+
+          return data;
+        });
+
+        return deferred.promise;
+      }
 
       loadLocalJS(path, function (data) {
         deferred.resolve(data);
+      });
+
+      // set current promise
+      state.promise = deferred.promise;
+      state.path = path;
+
+      // clear current promise when data is loaded
+      state.promise.then(function (data) {
+        state.promise = null;
+        state.path = null;
+        return data;
       });
 
       return deferred.promise;
     };
 
     // add helpers so can hook into global window
-    result._dataLoaded = dataLoaded;
+    LocalJSONP._dataLoaded = dataLoaded;
 
-    return result;
+    return LocalJSONP;
 
   })
 
