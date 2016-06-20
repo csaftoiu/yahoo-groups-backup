@@ -1,8 +1,8 @@
 'use strict';
 
-angular.module('staticyahoo.nav', ['ui.router'])
+angular.module('staticyahoo.nav', ['ui.router', 'staticyahoo.index'])
 
-  .config(function ($locationProvider, $stateProvider) {
+  .config(function ($locationProvider, $stateProvider, $urlRouterProvider) {
 
     $locationProvider.html5Mode(false);
 
@@ -10,8 +10,10 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
       // only show/hide the message index
       .state('index', {
-        onEnter: function ($rootScope) {
+        onEnter: function ($rootScope, LoadIndexTrigger) {
+          console.log("What");
           $rootScope.showMessageIndex = true;
+          LoadIndexTrigger.trigger();
         },
         onExit: function ($rootScope) {
           $rootScope.showMessageIndex = false;
@@ -36,6 +38,10 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
     ;
 
+    $urlRouterProvider.otherwise(function ($injector) {
+      $injector.get('$state').go('index');
+    })
+
   })
 
   .controller('NavCtrl', function ($scope, $rootScope, $state) {
@@ -53,11 +59,6 @@ angular.module('staticyahoo.nav', ['ui.router'])
       text: "About"
     }];
 
-  })
-
-  .run(function ($state) {
-    // start at the index
-    $state.go('index');
   })
 
 ;

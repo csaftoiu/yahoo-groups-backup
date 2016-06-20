@@ -18,19 +18,36 @@ angular.module('staticyahoo.index', [])
     });
 
     return {
+      // promise for the data
       promise: dataPromise,
-      idToIndex: idToIndex,
-      messageUrl: function (messageId) {
-        return $state.href('message', { id: messageId });
+      // get index data from an id
+      idToIndex: idToIndex
+    };
+  })
+
+  .factory('LoadIndexTrigger', function ($q) {
+    var deferred = $q.defer();
+    return {
+      loadPromise: deferred.promise,
+      trigger: function () {
+        deferred.resolve();
       }
     };
   })
 
-  .controller('IndexCtrl', function ($scope, $timeout, $filter, $rootScope, IndexData) {
+  .controller('IndexCtrl', function ($scope, $timeout, $filter, $rootScope, $state, $injector, LoadIndexTrigger) {
+
+    var loadTriggered = false;
 
     $scope.messageIndexLoaded = false;
 
+    var messageUrl = function (messageId) {
+      return $state.href('message', { id: messageId });
+    };
+
     var initializeIndexTable = function () {
+      loadTriggered = true;
+
       // show timezone in header
       $("#tz").html(" (" + (new Date()).format("Z") + ")");
 
@@ -47,6 +64,7 @@ angular.module('staticyahoo.index', [])
 
         // data source is a local .js file with the index data
         ajax: function (data, callback, settings) {
+          var IndexData = $injector.get('IndexData');
           console.log("ajax called");
           IndexData.promise.then(function (data) {
             console.log("Calling DataTables callback...");
@@ -68,7 +86,7 @@ angular.module('staticyahoo.index', [])
             // render link to message
             render: function (data, type, row, meta) {
               if (type === 'display') {
-                return '<a href="' + IndexData.messageUrl(row.i) + '">' + data + '</a>';
+                return '<a href="' + messageUrl(row.i) + '">' + data + '</a>';
               }
 
               return data;
@@ -97,7 +115,7 @@ angular.module('staticyahoo.index', [])
             // render link to message
             render: function (data, type, row, meta) {
               if (type === 'display') {
-                return '<a href="' + IndexData.messageUrl(row.i) + '">' + data + '</a>';
+                return '<a href="' + messageUrl(row.i) + '">' + data + '</a>';
               }
 
               return data;
@@ -119,8 +137,11 @@ angular.module('staticyahoo.index', [])
 
     };
 
-    // after page render, start loading table data
-    $timeout(initializeIndexTable, 10);
+    // when load is triggered...
+    LoadIndexTrigger.loadPromise.then(function () {
+      /// ... wait for a page render and start loading table data
+      $timeout(initializeIndexTable, 10);
+    });
 
   })
 
