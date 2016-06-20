@@ -15,6 +15,8 @@ angular.module('staticyahoo.local-jsonp', [])
    */
   .factory('LocalJSONP', function ($q) {
 
+    var cacheBuster = null;
+
     var state = {
       path: null,
       hook: null,
@@ -39,7 +41,14 @@ angular.module('staticyahoo.local-jsonp', [])
       state.hook = callback;
 
       var script = document.createElement('script');
-      script.src = path;
+
+      var src = path;
+      if (cacheBuster) {
+        src += '?cacheBuster=' + cacheBuster;
+      }
+
+      script.src = src;
+
       document.getElementsByTagName('head')[0].appendChild(script);
     };
 
@@ -82,6 +91,10 @@ angular.module('staticyahoo.local-jsonp', [])
 
     // add helpers so can hook into global window
     LocalJSONP._dataLoaded = dataLoaded;
+    // add ability to set cache buster
+    LocalJSONP.setCacheBuster = function (b) {
+      cacheBuster = b;
+    };
 
     return LocalJSONP;
 
