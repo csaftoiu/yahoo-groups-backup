@@ -15,15 +15,23 @@ angular.module('staticyahoo.nav', ['ui.router'])
         },
         onExit: function ($rootScope) {
           $rootScope.showMessageIndex = false;
-        }
+        },
+        url: '/index'
       })
 
       .state('files', {
-        templateUrl: './modules/files.html'
+        templateUrl: './modules/files.html',
+        url: '/files'
       })
 
       .state('about', {
-        templateUrl: './modules/about.html'
+        templateUrl: './modules/about.html',
+        url: '/about'
+      })
+
+      .state('message', {
+        templateUrl: './modules/message.html',
+        url: '/message/:id'
       })
 
     ;

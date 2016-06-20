@@ -5,6 +5,7 @@ angular
     'staticyahoo.local-jsonp',
     'staticyahoo.nav',
     'staticyahoo.index',
+    'staticyahoo.message',
     'ui.bootstrap'
   ])
 

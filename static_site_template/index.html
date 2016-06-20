@@ -15,35 +15,47 @@
         crossorigin="anonymous">
   <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet">
 
+  <style type="text/css">
+    body {
+      /* padding for nav */
+      padding-top: 50px;
+      /* min width for small devices */
+      min-width: 480px;
+    }
+
+    html {
+      /* always show scrollbar for consistency */
+      overflow-y: scroll;
+    }
+  </style>
+
 </head>
 
 <!-- padding to make room for nav -->
-<body style="padding-top: 50px; min-width: 480px">
+<body>
   <!-- ========================================== -->
   <!-- module templates (must be included inline) -->
   <!-- ========================================== -->
 
   <script type="text/ng-template" id="./modules/nav.html">
-
-  <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" ng-click="collapsed = !collapsed;">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="./index.html">{{ config.groupName }}</a>
+    <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" ng-click="collapsed = !collapsed;">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="./index.html">{{ config.groupName }}</a>
+      </div>
+      <div class="collapse navbar-collapse" uib-collapse="collapsed">
+        <ul class="nav navbar-nav">
+          <li ui-sref-active="active" ng-repeat="nav in navs">
+            <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
+            <a ui-sref="{{ nav.segment }}" ng-click="$parent.collapsed = true;">{{ nav.text }}</a>
+          </li>
+        </ul>
+      </div>
     </div>
-    <div class="collapse navbar-collapse" uib-collapse="collapsed">
-      <ul class="nav navbar-nav">
-        <li ui-sref-active="active" ng-repeat="nav in navs">
-          <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
-          <a ui-sref="{{ nav.segment }}" ng-click="$parent.collapsed = true;">{{ nav.text }}</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-
   </script>
 
   <script type="text/ng-template" id="./modules/files.html">
@@ -51,10 +63,9 @@
     <div class="text-center">
       <a href="./data/files" target="_blank" class="lead">Click to view the group files (opens in a new tab).</a>
     </div>
-
   </script>
-  <script type="text/ng-template" id="./modules/about.html">
 
+  <script type="text/ng-template" id="./modules/about.html">
     <div class="text-center">
       <br>
       <p class="lead">This is an automatically-generated backup of the "{{ config.groupName }}" Yahoo! Group.</p>
@@ -66,6 +77,24 @@
     </div>
   </script>
 
+  <script type="text/ng-template" id="./modules/message.html">
+    <hr>
+    Message Nav
+    <hr>
+    <div class="row" style="font-size: 125%;" ng-repeat="header in headers">
+      <div class="col-xs-4 col-sm-2"><b>{{ header.name }}</b></div>
+      <div class="col-xs-8 col-sm-10">{{ header.value }}</div>
+    </div>
+    <hr>
+    <div class="row">
+      <div class="col-xs-12">
+        {{ message.messageBody }}
+      </div>
+    </div>
+    <hr>
+    Message Nav
+    <hr>
+  </script>
 
   <!-- ================================= -->
   <!-- ========== actual site ========== -->
@@ -115,6 +144,8 @@
   <section ui-view></section>
   </div>
 
+  </div>
+
   <!-- noscript message, initially visible -->
   <div id="noscript-container">
     <div class="text-center">
@@ -143,6 +174,7 @@
   <script type="text/javascript" src="./modules/local-jsonp.js"></script>
   <script type="text/javascript" src="./modules/nav.js"></script>
   <script type="text/javascript" src="./modules/index.js"></script>
+  <script type="text/javascript" src="./modules/message.js"></script>
 
 
   <!-- ================================= -->
