@@ -5,7 +5,7 @@ Yahoo! Groups backup scraper.
 Usage:
   yahoo-groups-backup.py scrape_messages [options] <group_name>
   yahoo-groups-backup.py scrape_files [options] <group_name>
-  yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
+  yahoo-groups-backup.py dump_site [options] [--msgdb-page-size=<page_size>] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
 
 Commands:
@@ -14,16 +14,24 @@ Commands:
   dump_site           Dump the entire backup as a static website at the given root
                       directory
 
-Options:
-  -h --help                                   Show this screen
+Static Site Options:
+  --msgdb-page-size=<page_size>               Number of messages to store in each local file. Larger means less files
+                                              but each file is larger, while smaller means more files but each file
+                                              is more manageable. [default: 500]
+
+Scraping Options:
   -d --delay=<delay>                          Delay before scraping each message, to avoid rate limiting.
                                               Delays by a gaussian distribution with average <delay> and
                                               standard deviation <delay>/2. [default: 1]
+  [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
+
+
+Shared Options:
+  -h --help                                   Show this screen
   -c --config=<config_file>                   Use config file, if it exists [default: settings.yaml]
                                               Command-line settings override the config file settings
                                               "--mongo-host=foo" converts to "mongo-host: foo" in the
                                               config file.
-  [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
   --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
   --mongo-port=<port>                         Port for mongo database [default: 27017]
   --driver=<driver>                           Specify a webdriver for Selenium [default: firefox]
@@ -33,6 +41,7 @@ import json
 import os
 import platform
 import random
+import re
 import sys
 import time
 import urllib.parse
@@ -40,7 +49,6 @@ import urllib.parse
 import dateutil.parser
 from docopt import docopt
 import gridfs
-import jinja2
 import pymongo
 import requests
 import schema
@@ -52,6 +60,7 @@ import yaml
 args_schema = schema.Schema({
     '--mongo-port': schema.And(schema.Use(int), lambda n: 1 <= n <= 65535, error='Invalid mongo port'),
     '--delay': schema.And(schema.Use(float), lambda n: n > 0, error='Invalid delay, must be number > 0'),
+    '--msgdb-page-size': schema.Use(int),
     object: object,
 })
 
@@ -130,9 +139,10 @@ class YahooBackupDB:
             del doc['msgId']
             self.db.messages.update_one({'_id': message_number}, {'$set': doc}, upsert=True)
 
-    def yield_all_messages(self):
+    def yield_all_messages(self, start=None, end=None):
         """Yield all existing messages (skipping missing ones), in reverse message_id order."""
-        for msg in self.db.messages.find().sort('_id', -1):
+        query = {'_id': {'$gte': start or 0, '$lt': end or 9999999999}}
+        for msg in self.db.messages.find(query).sort('_id', -1):
             if not msg.get('messageBody'):
                 continue
 
@@ -273,9 +283,23 @@ class YahooBackupScraper:
                 assert stripped_name.endswith("&quot;")
                 stripped_name = stripped_name[6:-6].strip()
 
-            # if we have a weird encoding thing then forget it
+            # check that the stripped names match
+            # but if we have a weird encoding thing then forget it
             if not stripped_name.startswith("=?"):
-                assert stripped_name.strip() == data['authorName'].strip()
+                if stripped_name.startswith("&quot;"):
+                    assert stripped_name.endswith("&quot;")
+                    stripped_name = stripped_name[6:-6].strip()
+
+                check_authorname = data['authorName'].strip()
+                # if we have an email, ignore the domain
+                if '@' in stripped_name:
+                    assert '@' in data['authorName']
+                    stripped_name = stripped_name.split('@', 1)[0].strip()
+                    check_authorname = check_authorname.split('@', 1)[0].strip()
+
+                assert stripped_name == check_authorname.strip(), "Stripped name %s didn't match author name %s (check name was %s)" % (
+                        stripped_name, data['authorName'], check_authorname,
+                    )
 
             # leave only the email in
             data['from'], leftover = from_remainder.split('&gt;', 1)
@@ -285,6 +309,19 @@ class YahooBackupScraper:
         # replace no_reply with None for missing emails
         if data['from'] == 'no_reply@yahoogroups.com':
             data['from'] = None
+
+        # authorName may have weird encoding - try to fix it
+        match_hex = r"=([0-9a-f]{2})"
+        if data['authorName'] and re.search(match_hex, data['authorName']):
+            try:
+                orig = data['authorName']
+                as_ascii = orig.encode('ascii')
+                subbed = re.sub(match_hex.encode('ascii'), lambda m: bytes([int(m.groups(1)[0], 16)]), as_ascii)
+                data['authorName'] = subbed.decode('utf8')
+                eprint("Interpreted '%s' as '%s'" % (orig, data['authorName']))
+            except (UnicodeDecodeError, UnicodeEncodeError):
+                eprint("Failed to interpret '%s' as equal-sign-plus-hex-encoded utf8" % repr(data['authorName']))
+                # not a serious error, just continue
 
         return data
 
@@ -375,17 +412,27 @@ class YahooBackupScraper:
 
 def message_author(msg, include_email, hide_email=True):
     """Return a formatted message author from a msg object."""
-    if msg['authorName'] and msg['authorName'] != msg['profile']:
-        res = "%s (%s)" % (msg['authorName'], msg['profile'])
-    else:
-        res = "%s" % (msg['profile'],)
+    email = msg['from']
+    if hide_email and email:
+        email = msg['from'].rsplit("@", 1)[0] + "@..."
+    email = "<%s>" % email
 
-    if include_email and msg['from']:
-        if hide_email:
-            disp = msg['from'].rsplit("@", 1)[0] + "@..."
+    if msg['authorName'] and msg['profile']:
+        if msg['authorName'] == msg['profile']:
+            res = msg['authorName']
         else:
-            disp = msg['from']
-        res += " <%s>" % disp
+            res = "%s (%s)" % (msg['authorName'], msg['profile'])
+    elif msg['authorName']:
+        res = msg['authorName']
+    elif msg['profile']:
+        res = msg['profile']
+    elif msg['from']:
+        return email
+    else:
+        return "???"
+
+    if include_email and email:
+        res += " %s" % email
 
     return res
 
@@ -397,6 +444,7 @@ def scrape_messages(arguments):
                                  arguments['--password'])
 
     skipped = [0]
+
     def print_skipped(min):
         if skipped[0] >= min:
             eprint("Skipped %s messages we already processed" % skipped[0])
@@ -444,13 +492,7 @@ def scrape_files(arguments):
 
 
 def dump_site(arguments):
-    # helpers
-    import datetime
-
-    def get_formatted_date(message):
-        timestamp = message['postDate']
-        dt = datetime.datetime.fromtimestamp(timestamp)
-        return dt.strftime("%b-%d-%y, %I:%M %p")
+    import shutil
 
     # setup
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
@@ -460,15 +502,19 @@ def dump_site(arguments):
     if os.path.exists(root_dir):
         sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
-    messages_subdir = "messages"
-    files_subdir = "files"
+    # copy template site into the root dir, ignor data dir
+    P = os.path
+    shutil.copytree(P.join(P.dirname(__file__), 'static_site_template'),
+                    root_dir,
+                    ignore=lambda d, fs: ['data'])
 
-    # make the paths
-    os.makedirs(root_dir)
-    os.makedirs(os.path.join(root_dir, messages_subdir))
-    os.makedirs(os.path.join(root_dir, files_subdir))
+    # make the subdirs
+    data_dir = P.join(root_dir, 'data')
+    files_dir = P.join(data_dir, 'files')
+    os.makedirs(data_dir)
+    os.makedirs(files_dir)
 
-    # dump files
+    # dump the files
     def sanitize_filename(fn):
         return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
 
@@ -480,25 +526,16 @@ def dump_site(arguments):
 
         # split to pieces, ignore first empty piece, sanitize each piece, put back together
         sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
-        full_path = os.path.join(root_dir, files_subdir, sanitized)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        full_path = P.join(files_dir, sanitized)
+        os.makedirs(P.dirname(full_path), exist_ok=True)
         with open(full_path, "wb") as f:
             for chunk in file_f:
                 f.write(chunk)
 
-    loader = jinja2.FileSystemLoader(searchpath="./templates/")
-    env = jinja2.Environment(loader=loader)
-    env.globals['group_name'] = arguments['<group_name>']
-    env.globals['get_display_name'] = lambda *a, **kw: jinja2.escape(message_author(*a, **kw))
-    env.globals['get_formatted_date'] = get_formatted_date
-
-    def render_to_file(filename, template, template_args):
-        if 'path_to_root' not in template_args:
-            raise ValueError("template_args must contain 'path_to_root'")
-
-        if isinstance(template, str):
-            template = env.get_template(template)
-        open(os.path.join(root_dir, filename), "w").write(template.render(**template_args))
+    # render the data
+    def dump_jsonp(filename, data):
+        with open(P.join(data_dir, filename), "w") as f:
+            f.write("dataLoaded(%s);" % json.dumps(data, separators=',:'))
 
     missing_ids = db.missing_message_ids()
     if missing_ids:
@@ -508,32 +545,45 @@ def dump_site(arguments):
         ))
         eprint("")
 
-    eprint("Rendering index...")
-    render_to_file('index.html', 'index.html', {
-        'path_to_root': '.',
-        'messages': db.yield_all_messages(),
-    })
+    eprint("Rendering index data...")
+    # do not change these key names! the website depends on them
+    dump_jsonp('data.index.js', [
+        {
+            "i": message['_id'],
+            "s": message.get('subject'),
+            "a": message_author(message, include_email=False),
+            "d": message.get('postDate', 0),
+        }
+        for message in db.yield_all_messages()
+    ])
 
-    eprint("Rendering about page...")
-    render_to_file('about.html', 'about.html', {
-        'path_to_root': '.',
-        'last_message_date': get_formatted_date(db.get_latest_message()),
-    })
+    page_size = arguments['--msgdb-page-size']
+    latest_id = db.get_latest_message()['_id']
+    for start in range(0, latest_id+1, page_size):
+        end = start + page_size
+        eprint("Rendering messages %s to %s..." % (start, end))
+        dump_jsonp('data.messageData-%s-%s.js' % (start, end), [
+            {
+                "i": message['_id'],
+                "p": message['prevInTime'],
+                "n": message['nextInTime'],
+                "b": message['messageBody'],
+            }
+            for message in db.yield_all_messages(start=start, end=end)
+        ])
 
-    num_messages = db.num_messages()
-    eprint("Rendering %d messages..." % num_messages)
-    for i, msg in enumerate(db.yield_all_messages()):
-        if i % 1000 == 0:
-            eprint("    %d/%d..." % (i+1, num_messages))
-        render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
-            'path_to_root': '..',
-            'message': msg,
-        })
+    eprint("Rendering config file...")
+    dump_jsonp('data.config.js', {
+        'groupName': arguments['<group_name>'],
+        'lastMessageTime': db.get_latest_message().get('postDate'),
+        'messageDbPageSize': page_size,
+        'cacheBuster': int(time.time()),
+    })
 
     eprint("Site is ready in '%s'!" % root_dir)
 
 
-if __name__ == "__main__":
+def main():
     arguments = docopt(__doc__, version='Yahoo! Groups Backup-er 0.1')
 
     if arguments['--config'] != 'settings.yaml' and not os.path.exists(arguments['--config']):
@@ -563,3 +613,7 @@ if __name__ == "__main__":
         scrape_files(arguments)
     elif arguments['dump_site']:
         dump_site(arguments)
+
+
+if __name__ == "__main__":
+    main()

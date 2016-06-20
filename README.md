@@ -59,3 +59,61 @@ Options:
   --mongo-port=<port>                         Port for mongo database [default: 27017]
 
 ```
+
+## Approach
+
+### Scraping - Messages
+
+Scraping is done with Selenium to allow for scraping private sites. 
+
+The Yahoo Groups undocumented JSON API is used:
+
+* `https://groups.yahoo.com/api/v1/groups/<group_name>/messages?count=1&sortOrder=desc&direction=-1`
+to get the total number of messages.
+* `https://groups.yahoo.com/api/v1/groups/<group_name>/messages/<message_number>` to 
+get the data, with HTML content, for the given message
+* `https://groups.yahoo.com/api/v1/groups/<group_name>/messages/<message_number>/raw` to 
+get the data, with raw content, for the given message
+
+All the message data from the API is combined and inserted into a mongo
+database with the same name as the group. Data is stored as returned
+from the API except the message id is stored into the `_id` field.
+ 
+### Scraping - Files
+
+Files are scraped through the human-consumable interface (i.e. the website) 
+as I couldn't figure out the JSON API calls for it. 
+
+They are stored in a GridFS instance with the name `<group_name>_gridfs`.
+
+### Static Site Dumping
+
+All the group data - messages and files - can be dumped into a static
+site which is viewable without any internet connection whatsoever, and
+without needing to run a local browser.
+
+The static site is a simple AngularJS app. The message index data is
+stored as a separate .js file and loaded with "jsonp" (i.e. appending
+a script tag to the document). This allows us to essentially load 
+data from the local filesystem.
+
+The messages themselves are stored in batches of 1000 messages and 
+loaded on-demand. 
+
+The app is a single-page app, which takes a few seconds to load if there
+are a lot of messages, due to the index. However, once loaded, the 
+index is retained in memory and browsing is smooth. 
+
+A site is "dumped" by copying everything but the data from the
+`static_site_template` directory, and rendering the data for the
+particular group using Jinja2. 
+
+The `static_site_template` directory contains the template for the
+static site. `data` contains sample data from the 
+[multiagent](https://groups.yahoo.com/neo/groups/multiagent/info)
+ group. This is so the static site can be tested without having to
+  dump it each time.
+
+The group files are copied into the `files` directory, and it is left
+up to the browser to display the contents, as if browsing any other
+local directory.
