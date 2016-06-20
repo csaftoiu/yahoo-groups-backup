@@ -2,7 +2,7 @@
 
 angular.module('staticyahoo.index', [])
 
-  .controller('IndexCtrl', function ($scope, $timeout, LocalJSONP) {
+  .controller('IndexCtrl', function ($scope, $timeout, $filter, $rootScope, LocalJSONP) {
 
     $scope.messageIndexLoaded = false;
 
@@ -52,7 +52,7 @@ angular.module('staticyahoo.index', [])
             "render": function (data, type, row, meta) {
               // display & filter based on rendered date
               if (type === 'display' || type === 'filter') {
-                return (new Date(data * 1000)).format("mmm d, yyyy h:MM TT");
+                return $filter('date')(data * 1000, $rootScope.dateFormat);
               }
 
               // otherwise pass-through the data

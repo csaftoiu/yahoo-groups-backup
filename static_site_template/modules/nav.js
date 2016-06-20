@@ -27,6 +27,8 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
   .controller('NavCtrl', function ($scope, $rootScope, $state) {
 
+    $scope.collapsed = true;
+
     $scope.navs = [{
       segment: 'index',
       text: "Index"

@@ -5,9 +5,12 @@ angular
     'staticyahoo.local-jsonp',
     'staticyahoo.nav',
     'staticyahoo.index',
+    'ui.bootstrap'
   ])
 
   .run(function ($rootScope, LocalJSONP) {
+    $rootScope.dateFormat = 'MMM d, y h:mm a';
+
     $rootScope.configLoaded = false;
     console.log("Angular app loaded!");
 

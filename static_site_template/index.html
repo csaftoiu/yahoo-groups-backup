@@ -26,23 +26,21 @@
   <script type="text/ng-template" id="./modules/nav.html">
 
   <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
-    <div class="container">
-      <div class="navbar-header">
-        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="./index.html">{{ config.groupName }}</a>
-      </div>
-      <div class="collapse navbar-collapse">
-        <ul class="nav navbar-nav">
-          <li ui-sref-active="active" ng-repeat="nav in navs">
-            <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
-            <a ui-sref="{{ nav.segment }}">{{ nav.text }}</a>
-          </li>
-        </ul>
-      </div>
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" ng-click="collapsed = !collapsed;">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="./index.html">{{ config.groupName }}</a>
+    </div>
+    <div class="collapse navbar-collapse" uib-collapse="collapsed">
+      <ul class="nav navbar-nav">
+        <li ui-sref-active="active" ng-repeat="nav in navs">
+          <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
+          <a ui-sref="{{ nav.segment }}" ng-click="$parent.collapsed = true;">{{ nav.text }}</a>
+        </li>
+      </ul>
     </div>
   </div>
 
@@ -58,7 +56,7 @@
       <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
       </div>
     </div>
-    <div ng-show="messageIndexLoaded" class="container">
+    <div ng-show="messageIndexLoaded">
     <table id="messageIndexTable" class="table table-hover table-bordered" cellspacing="0" width="100%">
       <thead>
       <tr class="row">
@@ -84,8 +82,15 @@
   </script>
   <script type="text/ng-template" id="./modules/about.html">
 
-    This is the about page!
-
+    <div class="text-center">
+      <br>
+      <p class="lead">This is an automatically-generated backup of the "{{ config.groupName }}" Yahoo! Group.</p>
+      <p class="lead">
+        This backup doesn't contain any messages posted after {{ config.lastMessage*1000 | date:dateFormat }}.
+        To see the latest messages, check out the live group
+        <a href="https://groups.yahoo.com/neo/groups/{{ config.groupName }}/info">here</a>.
+      </p>
+    </div>
   </script>
 
 
@@ -94,7 +99,7 @@
   <!-- ================================= -->
 
   <!-- all content in one initially-hidden container -->
-  <div id="script-container" style="display: none;">
+  <div id="script-container" class="container" style="display: none;">
 
   <!-- first view - show until config loaded -->
   <div ng-show="!configLoaded" class="text-center">
@@ -132,6 +137,9 @@
 
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.3.1/angular-ui-router.min.js"></script>
+
+  <script type="text/javascript" src="./js/ui-bootstrap-custom-1.3.3.min.js"></script>
+  <script type="text/javascript" src="./js/ui-bootstrap-custom-tpls-1.3.3.min.js"></script>
 
   <!-- modules -->
   <script type="text/javascript" src="./modules/app.js"></script>
