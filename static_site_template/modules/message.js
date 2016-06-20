@@ -119,7 +119,7 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
 
   })
 
-  .controller('MessageCtrl', function ($rootScope, $scope, $filter, $stateParams, $sce, MessageData) {
+  .controller('MessageCtrl', function ($rootScope, $scope, $state, $filter, $stateParams, $sce, MessageData) {
     console.log($stateParams.id);
 
     $scope.headers = [];
@@ -134,6 +134,13 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
         {name: "Subject", value: msgData.s}
       ];
       $scope.message = {
+        prev: msgData.p,
+        next: msgData.n,
+        prevUrl: $state.href('message', { id: msgData.p }),
+        nextUrl: $state.href('message', { id: msgData.n }),
+        prevMissing: msgData.i - msgData.p > 1 ? (msgData.i - msgData.p - 1) : 0,
+        nextMissing: msgData.n - msgData.i > 1 ? (msgData.n - msgData.i - 1) : 0,
+        id: msgData.i,
         messageBody: $sce.trustAsHtml(msgData.b)
       };
     });
