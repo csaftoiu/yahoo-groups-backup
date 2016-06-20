@@ -59,7 +59,7 @@
       <br>
       <p class="lead">This is an automatically-generated backup of the "{{ config.groupName }}" Yahoo! Group.</p>
       <p class="lead">
-        This backup doesn't contain any messages posted after {{ config.lastMessage*1000 | date:dateFormat }}.
+        This backup doesn't contain any messages posted after {{ config.lastMessageTime*1000 | date:dateFormat }}.
         To see the latest messages, check out the live group
         <a href="https://groups.yahoo.com/neo/groups/{{ config.groupName }}/info">here</a>.
       </p>

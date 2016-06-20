@@ -1,1 +1,1 @@
-dataLoaded({groupName:'multiagent', lastMessage:1466333017});
+dataLoaded({groupName:'multiagent', lastMessageTime:1466333017});

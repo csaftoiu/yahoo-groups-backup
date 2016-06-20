@@ -130,9 +130,10 @@ class YahooBackupDB:
             del doc['msgId']
             self.db.messages.update_one({'_id': message_number}, {'$set': doc}, upsert=True)
 
-    def yield_all_messages(self):
+    def yield_all_messages(self, start=None, end=None):
         """Yield all existing messages (skipping missing ones), in reverse message_id order."""
-        for msg in self.db.messages.find().sort('_id', -1):
+        query = {'_id': {'$gte': start or 0, '$lt': end or 9999999999}}
+        for msg in self.db.messages.find(query).sort('_id', -1):
             if not msg.get('messageBody'):
                 continue
 
@@ -287,12 +288,9 @@ class YahooBackupScraper:
                     stripped_name = stripped_name.split('@', 1)[0].strip()
                     check_authorname = check_authorname.split('@', 1)[0].strip()
 
-                assert (
-                    stripped_name == check_authorname.strip(),
-                    "Stripped name %s didn't match author name %s (check name was %s)" % (
+                assert stripped_name == check_authorname.strip(), "Stripped name %s didn't match author name %s (check name was %s)" % (
                         stripped_name, data['authorName'], check_authorname,
                     )
-                )
 
             # leave only the email in
             data['from'], leftover = from_remainder.split('&gt;', 1)
@@ -555,30 +553,19 @@ def dump_site(arguments):
 
     eprint("Rendering index data...")
     render_to_file('data.index.js', 'data.index.js', {
-        'path_to_root': '.',
+        'path_to_root': '..',
         'messages': db.yield_all_messages(),
     })
 
-    eprint("Rendering index...")
-    render_to_file('index.html', 'index.html', {
-        'path_to_root': '.',
-    })
-
-    # eprint("Rendering about page...")
-    # render_to_file('about.html', 'about.html', {
-    #     'path_to_root': '.',
-    #     'last_message_date': get_formatted_date(db.get_latest_message()),
-    # })
-    #
-    # num_messages = db.num_messages()
-    # eprint("Rendering %d messages..." % num_messages)
-    # for i, msg in enumerate(db.yield_all_messages()):
-    #     if i % 1000 == 0:
-    #         eprint("    %d/%d..." % (i+1, num_messages))
-    #     render_to_file(os.path.join(messages_subdir, '%s.html' % msg['_id']), 'message.html', {
-    #         'path_to_root': '..',
-    #         'message': msg,
-    #     })
+    latest_id = db.get_latest_message()['_id']
+    page_size = 100
+    for start in range(0, latest_id+1, page_size):
+        end = start + page_size
+        eprint("Rendering messages %s to %s..." % (start, end))
+        render_to_file('data.messageData-%s-%s.js' % (start, end), 'data.messageData.js', {
+            'path_to_root': '..',
+            'messages': db.yield_all_messages(start=start, end=end)
+        })
 
     eprint("Site is ready in '%s'!" % root_dir)
 
