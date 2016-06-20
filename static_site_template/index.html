@@ -9,11 +9,8 @@
   <title>Yahoo! Group Backup</title>
 
   <!-- css -->
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-        crossorigin="anonymous">
-  <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet">
+  <link href="./css/bootstrap.min.css" rel="stylesheet">
+  <link href="./css/dataTables.bootstrap.min.css" rel="stylesheet">
 
   <style type="text/css">
     body {
@@ -141,7 +138,7 @@
 
   <!-- first view - show until config loaded -->
   <div ng-show="!configLoaded" class="text-center">
-    <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
+    <img src="./img/loader.gif">
   </div>
 
   <!-- second view - only show when finished loading -->
@@ -159,7 +156,7 @@
       <br>
       <p class="lead">Loading message index...</p>
       <p class="lead">(Browser may appear stuck for up to a few minutes.)</p>
-      <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
+      <img src="./img/loader.gif">
       </div>
     </div>
     <div ng-show="messageIndexLoaded">
@@ -194,13 +191,13 @@
   <!-- ================================= -->
 
   <!-- libraries -->
-  <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.js"></script>
-  <script type="text/javascript" src="http://stevenlevithan.com/assets/misc/date.format.js"></script>
+  <script type="text/javascript" src="./js/jquery-1.12.3.min.js"></script>
+  <script type="text/javascript" src="./js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript" src="./js/dataTables.bootstrap.min.js"></script>
+  <script type="text/javascript" src="./js/date.format.js"></script>
 
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.3.1/angular-ui-router.min.js"></script>
+  <script type="text/javascript" src="./js/angular.min.js"></script>
+  <script type="text/javascript" src="./js/angular-ui-router.min.js"></script>
 
   <script type="text/javascript" src="./js/ui-bootstrap-custom-1.3.3.min.js"></script>
   <script type="text/javascript" src="./js/ui-bootstrap-custom-tpls-1.3.3.min.js"></script>
