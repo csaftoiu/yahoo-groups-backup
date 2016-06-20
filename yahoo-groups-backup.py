@@ -5,7 +5,7 @@ Yahoo! Groups backup scraper.
 Usage:
   yahoo-groups-backup.py scrape_messages [options] <group_name>
   yahoo-groups-backup.py scrape_files [options] <group_name>
-  yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
+  yahoo-groups-backup.py dump_site [options] [--msgdb-page-size=<page_size>] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
 
 Commands:
@@ -14,16 +14,24 @@ Commands:
   dump_site           Dump the entire backup as a static website at the given root
                       directory
 
-Options:
-  -h --help                                   Show this screen
+Static Site Options:
+  --msgdb-page-size=<page_size>               Number of messages to store in each local file. Larger means less files
+                                              but each file is larger, while smaller means more files but each file
+                                              is more manageable. [default: 500]
+
+Scraping Options:
   -d --delay=<delay>                          Delay before scraping each message, to avoid rate limiting.
                                               Delays by a gaussian distribution with average <delay> and
                                               standard deviation <delay>/2. [default: 1]
+  [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
+
+
+Shared Options:
+  -h --help                                   Show this screen
   -c --config=<config_file>                   Use config file, if it exists [default: settings.yaml]
                                               Command-line settings override the config file settings
                                               "--mongo-host=foo" converts to "mongo-host: foo" in the
                                               config file.
-  [(--login=<login> --password=<password>)]   Specify Yahoo! Groups login (required for private groups)
   --mongo-host=<hostname>                     Hostname for mongo database [default: localhost]
   --mongo-port=<port>                         Port for mongo database [default: 27017]
 
@@ -40,7 +48,6 @@ import urllib.parse
 import dateutil.parser
 from docopt import docopt
 import gridfs
-import jinja2
 import pymongo
 import requests
 import schema
@@ -52,6 +59,7 @@ import yaml
 args_schema = schema.Schema({
     '--mongo-port': schema.And(schema.Use(int), lambda n: 1 <= n <= 65535, error='Invalid mongo port'),
     '--delay': schema.And(schema.Use(float), lambda n: n > 0, error='Invalid delay, must be number > 0'),
+    '--msgdb-page-size': schema.Use(int),
     object: object,
 })
 
@@ -481,13 +489,7 @@ def scrape_files(arguments):
 
 
 def dump_site(arguments):
-    # helpers
-    import datetime
-
-    def get_formatted_date(message):
-        timestamp = message['postDate']
-        dt = datetime.datetime.fromtimestamp(timestamp)
-        return dt.strftime("%b-%d-%y, %I:%M %p")
+    import shutil
 
     # setup
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
@@ -497,15 +499,19 @@ def dump_site(arguments):
     if os.path.exists(root_dir):
         sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
-    messages_subdir = "messages"
-    files_subdir = "files"
+    # copy template site into the root dir, ignor data dir
+    P = os.path
+    shutil.copytree(P.join(P.dirname(__file__), 'static_site_template'),
+                    root_dir,
+                    ignore=lambda d, fs: ['data'])
 
-    # make the paths
-    os.makedirs(root_dir)
-    os.makedirs(os.path.join(root_dir, messages_subdir))
-    os.makedirs(os.path.join(root_dir, files_subdir))
+    # make the subdirs
+    data_dir = P.join(root_dir, 'data')
+    files_dir = P.join(data_dir, 'files')
+    os.makedirs(data_dir)
+    os.makedirs(files_dir)
 
-    # dump files
+    # dump the files
     def sanitize_filename(fn):
         return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
 
@@ -517,31 +523,16 @@ def dump_site(arguments):
 
         # split to pieces, ignore first empty piece, sanitize each piece, put back together
         sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
-        full_path = os.path.join(root_dir, files_subdir, sanitized)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        full_path = P.join(root_dir, files_dir, sanitized)
+        os.makedirs(P.dirname(full_path), exist_ok=True)
         with open(full_path, "wb") as f:
             for chunk in file_f:
                 f.write(chunk)
 
-    loader = jinja2.FileSystemLoader(searchpath="./templates/")
-    env = jinja2.Environment(loader=loader)
-    env.globals['group_name'] = arguments['<group_name>']
-    env.globals['get_display_name'] = lambda *a, **kw: jinja2.escape(message_author(*a, **kw))
-    env.globals['get_formatted_date'] = get_formatted_date
-
-    def JSON_stringify(o):
-        if isinstance(o, jinja2.runtime.Undefined):
-            o = None
-        return json.dumps(o)
-    env.filters['JSON_stringify'] = JSON_stringify
-
-    def render_to_file(filename, template, template_args):
-        if 'path_to_root' not in template_args:
-            raise ValueError("template_args must contain 'path_to_root'")
-
-        if isinstance(template, str):
-            template = env.get_template(template)
-        open(os.path.join(root_dir, filename), "w").write(template.render(**template_args))
+    # render the data
+    def dump_jsonp(filename, data):
+        with open(P.join(data_dir, filename), "w") as f:
+            f.write("dataLoaded(%s);" % json.dumps(data, separators=',:'))
 
     missing_ids = db.missing_message_ids()
     if missing_ids:
@@ -552,20 +543,39 @@ def dump_site(arguments):
         eprint("")
 
     eprint("Rendering index data...")
-    render_to_file('data.index.js', 'data.index.js', {
-        'path_to_root': '..',
-        'messages': db.yield_all_messages(),
-    })
+    # do not change these key names! the website depends on them
+    dump_jsonp('data.index.js', [
+        {
+            "i": message['_id'],
+            "s": message['subject'],
+            "a": message_author(message, include_email=False),
+            "d": message.get('postDate', 0),
+        }
+        for message in db.yield_all_messages()
+    ])
 
+    page_size = arguments['--msgdb-page-size']
     latest_id = db.get_latest_message()['_id']
-    page_size = 100
     for start in range(0, latest_id+1, page_size):
         end = start + page_size
         eprint("Rendering messages %s to %s..." % (start, end))
-        render_to_file('data.messageData-%s-%s.js' % (start, end), 'data.messageData.js', {
-            'path_to_root': '..',
-            'messages': db.yield_all_messages(start=start, end=end)
-        })
+        dump_jsonp('data.messageData-%s-%s.js' % (start, end), [
+            {
+                "i": message['_id'],
+                "p": message['prevInTime'],
+                "n": message['nextInTime'],
+                "b": message['messageBody'],
+            }
+            for message in db.yield_all_messages(start=start, end=end)
+        ])
+
+    eprint("Rendering config file...")
+    dump_jsonp('data.config.js', {
+        'groupName': arguments['<group_name>'],
+        'lastMessageTime': db.get_latest_message().get('postDate'),
+        'messageDbPageSize': page_size,
+        'cacheBuster': int(time.time()),
+    })
 
     eprint("Site is ready in '%s'!" % root_dir)
 
