@@ -17,6 +17,7 @@
 
 </head>
 
+<!-- padding to make room for nav -->
 <body style="padding-top: 50px;">
   <!-- ========================================== -->
   <!-- module templates (must be included inline) -->
@@ -64,6 +65,16 @@
   <!-- ========== actual site ========== -->
   <!-- ================================= -->
 
+  <!-- all content in one initially-hidden container -->
+  <div id="script-container" style="display: none;">
+
+  <!-- first view - show until config loaded -->
+  <div ng-show="!configLoaded" class="text-center">
+    <img src="https://i1.wp.com/cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif">
+  </div>
+
+  <!-- second view - only show when finished loading -->
+  <div ng-show="configLoaded">
   <div ng-include="'./modules/nav.html'"></div>
 
   <div class="text-center">
@@ -72,7 +83,14 @@
   </div>
 
   <section ui-view></section>
+  </div>
 
+  <!-- noscript message, initially visible -->
+  <div id="noscript-container">
+    <div class="text-center">
+      <p class="lead">You must enable JavaScript to use this static website.</p>
+    </div>
+  </div>
 
   <!-- ================================= -->
   <!-- ========== js includes ========== -->
@@ -89,7 +107,7 @@
 
   <!-- modules -->
   <script type="text/javascript" src="./modules/app.js"></script>
-  <script type="text/javascript" src="modules/local-jsonp.js"></script>
+  <script type="text/javascript" src="./modules/local-jsonp.js"></script>
   <script type="text/javascript" src="./modules/nav.js"></script>
   <script type="text/javascript" src="./modules/index.js"></script>
 
@@ -98,6 +116,10 @@
   <!-- ========= bootstrap app ========= -->
   <!-- ================================= -->
   <script type="text/javascript">
+    // show javascript-only content
+    $("#noscript-container").css({"display": "none"});
+    $("#script-container").css({"display": ""});
+
     $(document).ready(function() {
       angular.bootstrap($("body"), ['staticyahoo.app']);
     });

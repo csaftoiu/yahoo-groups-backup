@@ -8,13 +8,15 @@ angular
   ])
 
   .run(function ($rootScope, LocalJSONP) {
+    $rootScope.configLoaded = false;
     console.log("Angular app loaded!");
 
     // load the group config and stick it on the root scope
     LocalJSONP('./data/data.config.js').then(function (config) {
       $rootScope.config = config;
 
-      console.log("Group name is: " + $rootScope.config.groupName);
+      console.log("Config loaded. Group name is: " + $rootScope.config.groupName);
+      $rootScope.configLoaded = true;
     });
   })
 
