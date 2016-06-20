@@ -14,14 +14,7 @@ angular.module('staticyahoo.nav', ['ui.router'])
       })
 
       .state('files', {
-        onEnter: function ($window, $state, $rootScope, $timeout) {
-          $window.open('./data/files', '_blank');
-          // refresh back to the previous state
-          var goBackTo = $state.current.name;
-          $timeout(function () {
-            $state.go(goBackTo);
-          }, 0);
-        }
+        templateUrl: './modules/files.html'
       })
 
       .state('about', {
@@ -32,7 +25,7 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
   })
 
-  .controller('NavCtrl', function ($scope, $state) {
+  .controller('NavCtrl', function ($scope, $rootScope, $state) {
 
     $scope.navs = [{
       segment: 'index',

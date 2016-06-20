@@ -37,7 +37,7 @@
       </div>
       <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-          <li ng-repeat="nav in navs">
+          <li ui-sref-active="active" ng-repeat="nav in navs">
             <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
             <a ui-sref="{{ nav.segment }}">{{ nav.text }}</a>
           </li>
@@ -54,6 +54,13 @@
 
   </script>
 
+  <script type="text/ng-template" id="./modules/files.html">
+    <br>
+    <div class="text-center">
+      <a href="./data/files" target="_blank" class="lead">Click to view the group files (opens in a new tab).</a>
+    </div>
+
+  </script>
   <script type="text/ng-template" id="./modules/about.html">
 
     This is the about page!
