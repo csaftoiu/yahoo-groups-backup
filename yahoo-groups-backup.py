@@ -523,7 +523,7 @@ def dump_site(arguments):
 
         # split to pieces, ignore first empty piece, sanitize each piece, put back together
         sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
-        full_path = P.join(root_dir, files_dir, sanitized)
+        full_path = P.join(files_dir, sanitized)
         os.makedirs(P.dirname(full_path), exist_ok=True)
         with open(full_path, "wb") as f:
             for chunk in file_f:
