@@ -547,7 +547,7 @@ def dump_site(arguments):
     dump_jsonp('data.index.js', [
         {
             "i": message['_id'],
-            "s": message['subject'],
+            "s": message.get('subject'),
             "a": message_author(message, include_email=False),
             "d": message.get('postDate', 0),
         }
