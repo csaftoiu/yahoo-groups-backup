@@ -1,31 +1,35 @@
 'use strict';
 
-angular.module('staticyahoo.nav', ['ui.router'])
+angular.module('staticyahoo.nav', ['ui.bootstrap', 'ngRoute', 'route-segment', 'view-segment'])
 
-  .config(function ($locationProvider, $stateProvider) {
+  .config(function ($routeSegmentProvider, $routeProvider) {
 
-    $locationProvider.html5Mode(false);
+    $routeSegmentProvider
 
-    $stateProvider
+      .when('/index', 'index')
+      .when('/files', 'files')
+      .when('/about', 'about')
 
-      .state('index', {
+      .segment('index', {
         templateUrl: './modules/index.html',
         controller: 'IndexCtrl'
       })
 
-      .state('files', {
+      .segment('files', {
         templateUrl: './modules/files.html'
       })
 
-      .state('about', {
+      .segment('about', {
         templateUrl: './modules/about.html'
       })
 
     ;
 
+    $routeProvider.otherwise({redirectTo: 'index'});
+
   })
 
-  .controller('NavCtrl', function ($scope, $rootScope, $state) {
+  .controller('NavCtrl', function ($scope) {
 
     $scope.collapsed = true;
 
@@ -42,9 +46,9 @@ angular.module('staticyahoo.nav', ['ui.router'])
 
   })
 
-  .run(function ($state) {
+/*  .run(function ($state) {
     // start at the index
     $state.go('index');
-  })
+  }) */
 
 ;
