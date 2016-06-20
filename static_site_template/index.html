@@ -18,50 +18,72 @@
 </head>
 
 <body ng-app="staticyahoo.app" style="padding-top: 50px;">
+  <!-- ========================================== -->
   <!-- module templates (must be included inline) -->
+  <!-- ========================================== -->
+
   <script type="text/ng-template" id="./modules/nav.html">
-    <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="./index.html">Yahoo! Groups Backup</a>
-        </div>
-        <div class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li ng-repeat="nav in navs">
-              <a href="#">{{ nav.text }}</a>
-            </li>
-          </ul>
-        </div>
+
+  <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="./index.html">Yahoo! Groups Backup</a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li ng-repeat="nav in navs">
+            <!--<a href="{{ nav.url }}">{{ nav.text }}</a>-->
+            <a ui-sref="{{ nav.segment }}">{{ nav.text }}</a>
+          </li>
+        </ul>
       </div>
     </div>
+  </div>
+
   </script>
 
-  <!------------------------------------->
-  <!------------ actual site ------------>
-  <!------------------------------------->
+  <script type="text/ng-template" id="./modules/index.html">
+
+    This is the index!
+
+  </script>
+
+  <script type="text/ng-template" id="./modules/about.html">
+
+    This is the about page!
+
+  </script>
+
+  <!-- ================================= -->
+  <!-- ========== actual site ========== -->
+  <!-- ================================= -->
 
   <div ng-include="'./modules/nav.html'"></div>
 
-  <!------------------------------------->
-  <!---------- end actual site ---------->
-  <!------------------------------------->
+  <section ui-view></section>
 
-  <!-- js - libraries -->
+  <!-- ================================= -->
+  <!-- ========== js includes ========== -->
+  <!-- ================================= -->
+
+  <!-- libraries -->
   <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
   <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.js"></script>
   <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.js"></script>
   <script type="text/javascript" src="http://stevenlevithan.com/assets/misc/date.format.js"></script>
 
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.3.1/angular-ui-router.min.js"></script>
 
-  <!-- js - modules -->
+  <!-- modules -->
   <script type="text/javascript" src="./modules/app.js"></script>
   <script type="text/javascript" src="./modules/nav.js"></script>
+  <script type="text/javascript" src="./modules/index.js"></script>
 
 </body>
 </html>

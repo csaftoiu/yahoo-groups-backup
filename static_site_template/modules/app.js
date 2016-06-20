@@ -2,10 +2,11 @@
 
 angular
   .module('staticyahoo.app', [
-    'staticyahoo.nav'
+    'staticyahoo.nav',
+    'staticyahoo.index'
   ])
 
-  .run(function () {
+  .run(function ($rootScope) {
     console.log("Angular app loaded!");
   })
 
