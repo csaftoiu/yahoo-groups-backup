@@ -50,13 +50,13 @@ angular.module('staticyahoo.index', [])
             "data": "d",
             "className": "col-xs-4  col-sm-3 col-md-3 col-lg-2",
             "render": function (data, type, row, meta) {
-              // sort by timestamp
-              if (type === 'sort') {
-                return data;
+              // display & filter based on rendered date
+              if (type === 'display' || type === 'filter') {
+                return (new Date(data * 1000)).format("mmm d, yyyy h:MM TT");
               }
 
-              // otherwise - display or filter the date in local time
-              return (new Date(data * 1000)).format("mmm d, yyyy h:MM TT");
+              // otherwise pass-through the data
+              return data;
             }
           },
           {
@@ -69,6 +69,8 @@ angular.module('staticyahoo.index', [])
         "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
           $(nRow).addClass('row');
         },
+
+        // on complete, display the table
         "initComplete": function (settings, json) {
           console.log("Index loading complete!");
           $scope.messageIndexLoaded = true;
