@@ -15,25 +15,11 @@
         crossorigin="anonymous">
   <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet">
 
-  <!-- js - libraries -->
-
-  <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.js"></script>
-  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.js"></script>
-  <script type="text/javascript" src="http://stevenlevithan.com/assets/misc/date.format.js"></script>
-
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-
-  <!-- js - modules -->
-  <script type="text/javascript" src="./modules/app.js"></script>
-  <script type="text/javascript" src="./modules/nav.js"></script>
-
 </head>
 
 <body ng-app="staticyahoo.app" style="padding-top: 50px;">
-
-  <!-- submodules - nav.html -->
-  <script type="text/ng-template" id="modules/nav/nav.html">
+  <!-- module templates (must be included inline) -->
+  <script type="text/ng-template" id="./modules/nav.html">
     <div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
       <div class="container">
         <div class="navbar-header">
@@ -50,28 +36,32 @@
               <a href="#">{{ nav.text }}</a>
             </li>
           </ul>
-
-          <!--{% set navigation = [
-              ('index.html', 'index', 'Index'),
-              ('files', 'files', 'Files'),
-              ('about.html', 'about', 'About'),
-          ] %}
-          {% set active_page = active_page|default('index') %}
-          <ul class="nav navbar-nav">
-            {% for href, id, caption in navigation %}
-              <li {% if id == active_page %} class="active" {% endif %}>
-                <a href="{{ path_to_root }}/{{ href }}">{{ caption  }}</a>
-              </li>
-            {% endfor %}
-          </ul>-->
-        </div><!--/.nav-collapse -->
+        </div>
       </div>
     </div>
   </script>
 
-  <!-- actual site -->
+  <!------------------------------------->
+  <!------------ actual site ------------>
+  <!------------------------------------->
 
-  <div ng-include="'modules/nav/nav.html'"></div>
+  <div ng-include="'./modules/nav.html'"></div>
+
+  <!------------------------------------->
+  <!---------- end actual site ---------->
+  <!------------------------------------->
+
+  <!-- js - libraries -->
+  <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.js"></script>
+  <script type="text/javascript" src="http://stevenlevithan.com/assets/misc/date.format.js"></script>
+
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+
+  <!-- js - modules -->
+  <script type="text/javascript" src="./modules/app.js"></script>
+  <script type="text/javascript" src="./modules/nav.js"></script>
 
 </body>
 </html>
