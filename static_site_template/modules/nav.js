@@ -33,7 +33,8 @@ angular.module('staticyahoo.nav', ['ui.router', 'staticyahoo.index'])
 
       .state('message', {
         templateUrl: './modules/message.html',
-        url: '/message/:id'
+        url: '/message/:id',
+        'controller': 'MessageCtrl'
       })
 
     ;
