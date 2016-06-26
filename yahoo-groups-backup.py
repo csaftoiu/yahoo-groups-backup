@@ -5,7 +5,7 @@ Yahoo! Groups backup scraper.
 Usage:
   yahoo-groups-backup.py scrape_messages [options] <group_name>
   yahoo-groups-backup.py scrape_files [options] <group_name>
-  yahoo-groups-backup.py dump_site [options] [--msgdb-page-size=<page_size>] <group_name> <root_dir>
+  yahoo-groups-backup.py dump_site [options] <group_name> <root_dir>
   yahoo-groups-backup.py -h | --help
 
 Commands:
@@ -18,6 +18,8 @@ Static Site Options:
   --msgdb-page-size=<page_size>               Number of messages to store in each local file. Larger means less files
                                               but each file is larger, while smaller means more files but each file
                                               is more manageable. [default: 500]
+  --redact-before=<message_id>                Redact messages before this message number. Used to dump smaller sits
+                                              for testing. [default: 0]
 
 Scraping Options:
   -d --delay=<delay>                          Delay before scraping each message, to avoid rate limiting.
@@ -61,6 +63,7 @@ args_schema = schema.Schema({
     '--mongo-port': schema.And(schema.Use(int), lambda n: 1 <= n <= 65535, error='Invalid mongo port'),
     '--delay': schema.And(schema.Use(float), lambda n: n > 0, error='Invalid delay, must be number > 0'),
     '--msgdb-page-size': schema.Use(int),
+    '--redact-before': schema.Use(int),
     object: object,
 })
 
@@ -139,12 +142,15 @@ class YahooBackupDB:
             del doc['msgId']
             self.db.messages.update_one({'_id': message_number}, {'$set': doc}, upsert=True)
 
-    def yield_all_messages(self, start=None, end=None):
+    def yield_all_messages(self, start=None, end=None, redact_before=None):
         """Yield all existing messages (skipping missing ones), in reverse message_id order."""
         query = {'_id': {'$gte': start or 0, '$lt': end or 9999999999}}
         for msg in self.db.messages.find(query).sort('_id', -1):
             if not msg.get('messageBody'):
                 continue
+
+            if redact_before and msg['_id'] <= redact_before:
+                msg['messageBody'] = "(redacted for testing)"
 
             yield msg
 
@@ -410,31 +416,10 @@ class YahooBackupScraper:
                 ))
 
 
-def message_author(msg, include_email, hide_email=True):
-    """Return a formatted message author from a msg object."""
-    email = msg['from']
-    if hide_email and email:
-        email = msg['from'].rsplit("@", 1)[0] + "@..."
-    email = "<%s>" % email
-
-    if msg['authorName'] and msg['profile']:
-        if msg['authorName'] == msg['profile']:
-            res = msg['authorName']
-        else:
-            res = "%s (%s)" % (msg['authorName'], msg['profile'])
-    elif msg['authorName']:
-        res = msg['authorName']
-    elif msg['profile']:
-        res = msg['profile']
-    elif msg['from']:
-        return email
-    else:
-        return "???"
-
-    if include_email and email:
-        res += " %s" % email
-
-    return res
+def mask_email(email):
+    if not email:
+        return ''
+    return email.rsplit("@", 1)[0] + "@...";
 
 
 def scrape_messages(arguments):
@@ -464,7 +449,9 @@ def scrape_messages(arguments):
         if not msg:
             eprint("Message #%s is missing" % (cur_message,))
         else:
-            eprint("Inserted message #%s by %s" % (cur_message, message_author(msg, True)))
+            eprint("Inserted message #%s by %s/%s/%s" % (
+                cur_message,
+                msg['authorName'], msg['profile'], msg['from']))
 
         cur_message -= 1
 
@@ -534,8 +521,40 @@ def dump_site(arguments):
 
     # render the data
     def dump_jsonp(filename, data):
+        """Dump a JSON-serializable object to a file, in a format that the LocalJSONP factory on the
+        static site expects."""
         with open(P.join(data_dir, filename), "w") as f:
             f.write("dataLoaded(%s);" % json.dumps(data, separators=',:'))
+
+    def dump_jsonp_records(filename, records):
+        """Same as `dump_jsonp`, except only works on lists of dicts, and stores them
+        more efficiently."""
+        # store all record keys as a set
+        keys = set()
+        for record in records:
+            keys.update(record.keys())
+        keys = sorted(list(keys))
+
+        # write it all
+        with open(P.join(data_dir, filename), "w") as f:
+            f.write("""\
+(function () {
+    var keys = %s;
+    var records = %s;
+    var result = [];
+    for (var i=0; i < records.length; i++) {
+        var record = {};
+        for (var j=0; j < keys.length; j++) {
+            record[keys[j]] = records[i][j];
+        }
+        result.push(record);
+    }
+    dataLoaded(result);
+})();""" % (
+                json.dumps(keys, separators=',;'),
+                json.dumps([[record.get(key) for key in keys] for record in records],
+                           separators=',;'),
+            ))
 
     missing_ids = db.missing_message_ids()
     if missing_ids:
@@ -546,13 +565,14 @@ def dump_site(arguments):
         eprint("")
 
     eprint("Rendering index data...")
-    # do not change these key names! the website depends on them
-    dump_jsonp('data.index.js', [
+    dump_jsonp_records('data.index.js', [
         {
-            "i": message['_id'],
-            "s": message.get('subject'),
-            "a": message_author(message, include_email=False),
-            "d": message.get('postDate', 0),
+            "id": message['_id'],
+            "subject": message.get('subject', ''),
+            "authorName": message.get('authorName', ''),
+            "profile": message.get('profile', ''),
+            "from": mask_email(message.get('from', '')),
+            "timestamp": message.get('postDate', 0),
         }
         for message in db.yield_all_messages()
     ])
@@ -562,14 +582,12 @@ def dump_site(arguments):
     for start in range(0, latest_id+1, page_size):
         end = start + page_size
         eprint("Rendering messages %s to %s..." % (start, end))
-        dump_jsonp('data.messageData-%s-%s.js' % (start, end), [
+        dump_jsonp_records('data.messageData-%s-%s.js' % (start, end), [
             {
-                "i": message['_id'],
-                "p": message['prevInTime'],
-                "n": message['nextInTime'],
-                "b": message['messageBody'],
+                "id": message['_id'],
+                "messageBody": message['messageBody'],
             }
-            for message in db.yield_all_messages(start=start, end=end)
+            for message in db.yield_all_messages(start=start, end=end, redact_before=arguments['--redact-before'])
         ])
 
     eprint("Rendering config file...")

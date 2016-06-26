@@ -10,10 +10,8 @@ angular.module('staticyahoo.nav', ['ui.router', 'staticyahoo.index'])
 
       // only show/hide the message index
       .state('index', {
-        onEnter: function ($rootScope, LoadIndexTrigger) {
-          console.log("What");
+        onEnter: function ($rootScope) {
           $rootScope.showMessageIndex = true;
-          LoadIndexTrigger.trigger();
         },
         onExit: function ($rootScope) {
           $rootScope.showMessageIndex = false;

@@ -1,14 +1,8 @@
 'use strict';
 
-angular.module('staticyahoo.message', ['staticyahoo.index'])
+angular.module('staticyahoo.message', ['ngSanitize', 'staticyahoo.index'])
 
   .factory('MessageData', function ($rootScope, $q, LocalJSONP, IndexData) {
-
-    var cache = {
-      loading: false,
-      promise: null,
-      filename: null
-    };
 
     var idToFilename = function (i) {
       var page = $rootScope.config.messageDbPageSize;
@@ -23,7 +17,7 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
       // map the data
       var idToData = {};
       for (var i=0; i < data.length; i++) {
-        idToData[data[i].i] = data[i];
+        idToData[data[i].id] = data[i];
       }
 
       return {
@@ -33,46 +27,21 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
     };
 
     var getFileData = function (fn) {
-      // if cache already has a file...
-      if (cache.filename) {
-        // if same file is loading/already in cache, return same promise
-        if (cache.filename === fn) {
-          console.log("Using cache for file '" + fn + "'");
-          return cache.promise;
-        }
+      var cache = getFileData.cache = getFileData.cache || {};
 
-        // if loading a different file, just load this one without caching it
-        if (cache.loading) {
-          console.log("Cache already loading file '" + cache.filename + "', not caching load of '" + fn + "'");
-          var deferred = $q.defer();
-          LocalJSONP(fn).then(function (data) {
-            deferred.resolve(procFileData(data));
-            return data;
-          });
-          return deferred.promise;
-        }
-
-        // otherwise overwrite it
-        console.log("Overwriting cached file '" + cache.filename + "' with '" + fn + "'");
-      }
-      else {
-        console.log("Loading first file to cache: '" + fn + "'");
+      // if cache already has this file, return the same promise
+      if (cache.filename === fn) {
+        return cache.promise;
       }
 
+      // otherwise, new promise and new file
       var deferred = $q.defer();
-      cache.loading = true;
       cache.filename = fn;
       cache.promise = deferred.promise;
-
       LocalJSONP(fn).then(function (data) {
-        console.log("Loading '" + fn + "' into cache");
-        cache.loading = false;
-
         deferred.resolve(procFileData(data));
-
-        return data; // pass through data
+        return data;
       });
-
       return cache.promise;
     };
 
@@ -83,11 +52,15 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
        * message was not found.
        */
       getMessageData: function (id) {
+        if (typeof id === "string") {
+          id = parseInt(id);
+        }
+
         var deferred = $q.defer();
 
         // wait until index data is loaded
         IndexData.promise.then(function (data) {
-          var indexRow = IndexData.idToIndex[id];
+          var indexRow = IndexData.lokiCollection.find({ id: id })[0];
 
           if (!indexRow) {
             console.log("Message " + id + " not found in index");
@@ -119,29 +92,53 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
 
   })
 
-  .controller('MessageCtrl', function ($rootScope, $scope, $state, $filter, $stateParams, $sce, MessageData) {
-    console.log($stateParams.id);
-
+  .controller('MessageCtrl', function (
+      $rootScope, $scope, $state, $filter, $stateParams, $sce,
+      MessageData, MessageIndex
+  ) {
+    var FROM = 0, DATE = 1, SUBJECT = 2, LINK = 3;
     $scope.headers = [];
-    $scope.message = {};
+    $scope.headers[FROM] = {name: "From", value: "..."};
+    $scope.headers[DATE] = {name: "Date", value: "..."};
+    $scope.headers[SUBJECT] = {name: "Subject", value: "..."};
+    $scope.headers[LINK] = {name: "Link", value: "..."};
+
+    $scope.message = {
+      // we know the id
+      id: $stateParams.id,
+      // keep prev and next as the same value in case they accidentally click on it while something is loading
+      prev: $stateParams.id,
+      next: $stateParams.id,
+      prevUrl: $state.href('message', { id: $stateParams.id }),
+      nextUrl: $state.href('message', { id: $stateParams.id }),
+      prevMissing: 0,
+      nextMissing: 0
+      // message body will be loading
+    };
+
+    $scope.loading = true;
 
     MessageData.getMessageData($stateParams.id).then(function (msgData) {
-      console.log(msgData);
+      $scope.loading = false;
+      $scope.headers[FROM].value = MessageIndex.formatMessageAuthor(msgData, true);
+      $scope.headers[DATE].value = $filter('date')(msgData.timestamp * 1000, $rootScope.dateFormat);
+      $scope.headers[SUBJECT].value = msgData.subject;
+      $scope.headers[LINK].value = $sce.trustAsHtml(
+        '<a href="https://groups.yahoo.com/neo/groups/'
+            + $rootScope.config.groupName + '/conversations/messages/' + msgData.id
+        + '">' +
+        'View this message on the live group' +
+        '</a>');
 
-      $scope.headers = [
-        {name: "From", value: msgData.a},
-        {name: "Date", value: $filter('date')(msgData.d * 1000, $rootScope.dateFormat)},
-        {name: "Subject", value: msgData.s}
-      ];
       $scope.message = {
-        prev: msgData.p,
-        next: msgData.n,
-        prevUrl: $state.href('message', { id: msgData.p }),
-        nextUrl: $state.href('message', { id: msgData.n }),
-        prevMissing: msgData.i - msgData.p > 1 ? (msgData.i - msgData.p - 1) : 0,
-        nextMissing: msgData.n - msgData.i > 1 ? (msgData.n - msgData.i - 1) : 0,
-        id: msgData.i,
-        messageBody: $sce.trustAsHtml(msgData.b)
+        id: msgData.id,
+        prev: msgData.prevInTime,
+        next: msgData.nextInTime,
+        prevUrl: $state.href('message', { id: msgData.prevInTime }),
+        nextUrl: $state.href('message', { id: msgData.nextInTime }),
+        prevMissing: msgData.id - msgData.prevInTime > 1 ? (msgData.id - msgData.prevInTime - 1) : 0,
+        nextMissing: msgData.nextInTime - msgData.id > 1 ? (msgData.nextInTime - msgData.id - 1) : 0,
+        messageBody: $sce.trustAsHtml(msgData.messageBody)
       };
     });
 

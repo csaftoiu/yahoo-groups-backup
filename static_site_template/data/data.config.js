@@ -1,1 +1,1 @@
-dataLoaded({groupName:'multiagent',  lastMessageTime:1466333017, messageDbPageSize: 100, cacheBuster: 2});
+dataLoaded({"cacheBuster":1466915196,"lastMessageTime":1466333017,"messageDbPageSize":500,"groupName":"multiagent"});

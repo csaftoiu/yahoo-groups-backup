@@ -20,16 +20,26 @@ angular.module('staticyahoo.local-jsonp', [])
     var state = {
       path: null,
       hook: null,
-      promise: null
+      promise: null,
+      script: null
     };
 
     var dataLoaded = function (data) {
+      if (!state.script) {
+        console.error("Data loaded without a script tag!");
+      }
+      else {
+        document.getElementsByTagName('head')[0].removeChild(state.script);
+        state.script = null;
+      }
+
       if (!state.hook) {
         console.error("Data loaded without a hook!");
       }
-
-      state.hook(data);
-      state.hook = null;
+      else {
+        state.hook(data);
+        state.hook = null;
+      }
     };
 
     /**
@@ -41,6 +51,8 @@ angular.module('staticyahoo.local-jsonp', [])
       state.hook = callback;
 
       var script = document.createElement('script');
+
+      state.script = script;
 
       var src = path;
       if (cacheBuster) {
