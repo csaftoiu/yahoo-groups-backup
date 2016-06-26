@@ -481,44 +481,62 @@ def scrape_files(arguments):
 def dump_site(arguments):
     import shutil
 
+    # -----------------
     # setup
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
-    root_dir = arguments['<root_dir>']
+    dest_root_dir = arguments['<root_dir>']
 
-    if os.path.exists(root_dir):
+    if os.path.exists(dest_root_dir):
         sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
-    # copy template site into the root dir, ignor data dir
+    # -----------------
+    # copy template site into the root dir
     P = os.path
-    shutil.copytree(P.join(P.dirname(__file__), 'static_site_template'),
-                    root_dir,
-                    ignore=lambda d, fs: ['data'])
+    source_root_dir = P.join(P.dirname(__file__), 'static_site_template')
 
-    # make the subdirs
-    data_dir = P.join(root_dir, 'data')
+    # ignore the .html files in modules/ since we won't need them
+    def ignore_copy(d, fs):
+        if P.abspath(d) == P.abspath(P.join(source_root_dir, "modules")):
+            return [f for f in fs if f.endswith(".html")]
+
+        return []
+
+    shutil.copytree(source_root_dir, dest_root_dir, ignore=ignore_copy)
+
+    # -----------------
+    # make the data subdirs
+    data_dir = P.join(dest_root_dir, 'data')
     files_dir = P.join(data_dir, 'files')
     os.makedirs(data_dir)
     os.makedirs(files_dir)
 
-    # dump the files
-    def sanitize_filename(fn):
-        return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
+    # -----------------
+    # render the templates
+    eprint("Rendering templates...")
+    with open(P.join(dest_root_dir, 'modules', 'load-templates.js'), 'w') as f:
+        cache_puts = []
+        for fn in os.listdir(P.join(source_root_dir, 'modules')):
+            if not fn.endswith(".html"):
+                continue
+            with open(P.join(source_root_dir, 'modules', fn), "r") as template_f:
+                data = template_f.read()
+            cache_puts.append(("./modules/%s" % fn, data))
 
-    eprint("Dumping all files...")
-    for ent, file_f in db.yield_all_files():
-        if file_f is None:
-            eprint("Skipping '%s', have no data for this file..." % (ent['_id'],))
-            continue
+        f.write("""\
+'use strict';
 
-        # split to pieces, ignore first empty piece, sanitize each piece, put back together
-        sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
-        full_path = P.join(files_dir, sanitized)
-        os.makedirs(P.dirname(full_path), exist_ok=True)
-        with open(full_path, "wb") as f:
-            for chunk in file_f:
-                f.write(chunk)
+angular
+  .module('staticyahoo.app')
 
+  .run(function ($templateCache) {
+%s
+  })
+
+;
+""" % "\n".join("""    $templateCache.put(%s, %s);""" % (json.dumps(fn), json.dumps(data)) for fn, data in cache_puts))
+
+    # -----------------
     # render the data
     def dump_jsonp(filename, data):
         """Dump a JSON-serializable object to a file, in a format that the LocalJSONP factory on the
@@ -598,7 +616,28 @@ def dump_site(arguments):
         'cacheBuster': int(time.time()),
     })
 
-    eprint("Site is ready in '%s'!" % root_dir)
+    # -----------------
+    # dump the files
+    def sanitize_filename(fn):
+        return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
+
+    eprint("Dumping group files...")
+    for ent, file_f in db.yield_all_files():
+        if file_f is None:
+            eprint("Skipping '%s', have no data for this file..." % (ent['_id'],))
+            continue
+
+        # split to pieces, ignore first empty piece, sanitize each piece, put back together
+        sanitized = '/'.join(map(sanitize_filename, ent['_id'].split('/')[1:]))
+        full_path = P.join(files_dir, sanitized)
+        os.makedirs(P.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as f:
+            for chunk in file_f:
+                f.write(chunk)
+
+    # -----------------
+    # done
+    eprint("Site is ready in '%s'!" % dest_root_dir)
 
 
 def main():

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('staticyahoo.message', ['ngSanitize', 'staticyahoo.index'])
+angular.module('staticyahoo.message', ['staticyahoo.index'])
 
   .factory('MessageData', function ($rootScope, $q, LocalJSONP, IndexData) {
 
@@ -101,7 +101,6 @@ angular.module('staticyahoo.message', ['ngSanitize', 'staticyahoo.index'])
     $scope.headers[FROM] = {name: "From", value: "..."};
     $scope.headers[DATE] = {name: "Date", value: "..."};
     $scope.headers[SUBJECT] = {name: "Subject", value: "..."};
-    $scope.headers[LINK] = {name: "Link", value: "..."};
 
     $scope.message = {
       // we know the id
@@ -123,12 +122,6 @@ angular.module('staticyahoo.message', ['ngSanitize', 'staticyahoo.index'])
       $scope.headers[FROM].value = MessageIndex.formatMessageAuthor(msgData, true);
       $scope.headers[DATE].value = $filter('date')(msgData.timestamp * 1000, $rootScope.dateFormat);
       $scope.headers[SUBJECT].value = msgData.subject;
-      $scope.headers[LINK].value = $sce.trustAsHtml(
-        '<a href="https://groups.yahoo.com/neo/groups/'
-            + $rootScope.config.groupName + '/conversations/messages/' + msgData.id
-        + '">' +
-        'View this message on the live group' +
-        '</a>');
 
       $scope.message = {
         id: msgData.id,

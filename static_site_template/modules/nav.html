@@ -1,0 +1,17 @@
+<div class="navbar navbar-inverse navbar-fixed-top" ng-controller="NavCtrl">
+  <div class="navbar-header">
+    <button type="button" class="navbar-toggle" ng-click="collapsed = !collapsed;">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    <a class="navbar-brand" href="./index.html">{{ config.groupName }}</a>
+  </div>
+  <div class="collapse navbar-collapse" uib-collapse="collapsed">
+    <ul class="nav navbar-nav">
+      <li ui-sref-active="active" ng-repeat="nav in navs">
+        <a ui-sref="{{ nav.segment }}" ng-click="$parent.collapsed = true;">{{ nav.text }}</a>
+      </li>
+    </ul>
+  </div>
+</div>
