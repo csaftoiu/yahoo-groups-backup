@@ -108,11 +108,22 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
       // keep prev and next as the same value in case they accidentally click on it while something is loading
       prev: $stateParams.id,
       next: $stateParams.id,
-      prevUrl: $state.href('message', { id: $stateParams.id }),
-      nextUrl: $state.href('message', { id: $stateParams.id }),
-      prevMissing: 0,
-      nextMissing: 0
-      // message body will be loading
+      missing: false
+    };
+
+    $scope.prevUrl = function () {
+      return $state.href('message', { id: $scope.message.prev });
+    };
+    $scope.nextUrl = function () {
+      return $state.href('message', { id: $scope.message.next });
+    };
+    $scope.prevMissing = function () {
+      var m = $scope.message;
+      return m.id - m.prev > 1 ? (m.id - m.prev - 1) : 0;
+    };
+    $scope.nextMissing = function () {
+      var m = $scope.message;
+      return m.next - m.id > 1 ? (m.next - m.id - 1) : 0;
     };
 
     $scope.loading = true;
@@ -127,11 +138,17 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
         id: msgData.id,
         prev: msgData.prevInTime,
         next: msgData.nextInTime,
-        prevUrl: $state.href('message', { id: msgData.prevInTime }),
-        nextUrl: $state.href('message', { id: msgData.nextInTime }),
-        prevMissing: msgData.id - msgData.prevInTime > 1 ? (msgData.id - msgData.prevInTime - 1) : 0,
-        nextMissing: msgData.nextInTime - msgData.id > 1 ? (msgData.nextInTime - msgData.id - 1) : 0,
-        messageBody: $sce.trustAsHtml(msgData.messageBody)
+        messageBody: $sce.trustAsHtml(msgData.messageBody),
+        missing: false
+      };
+    }, function () {
+      // failed
+      $scope.loading = false;
+      $scope.message = {
+        id: $stateParams.id,
+        prev: +$stateParams.id - 1,
+        next: +$stateParams.id + 1,
+        missing: true
       };
     });
 

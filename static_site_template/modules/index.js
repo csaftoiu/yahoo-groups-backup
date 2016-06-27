@@ -66,7 +66,7 @@ angular.module('staticyahoo.index', [])
       // promise for the data
       promise: dataPromise,
       // the loki collection
-      lokiCollection: coll,
+      lokiCollection: coll
     };
   })
 
