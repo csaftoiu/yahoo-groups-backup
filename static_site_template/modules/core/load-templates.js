@@ -1,5 +1,10 @@
 'use strict';
 
+/** IMPORTANT:
+ * DO NOT CHANGE THIS FILE OR MOVE IT!
+ * It is hooked into in a very hard-coded manner by the Python dump site script!
+ */
+
 angular
   .module('staticyahoo.core')
 
