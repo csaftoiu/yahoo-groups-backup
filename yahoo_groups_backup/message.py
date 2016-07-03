@@ -64,7 +64,7 @@ def html_from_email_message(msg):
 
     if msg.get_content_subtype() == 'plain':
         # render plain text in reasonable-looking HTML
-        html_string = body_string.replace("\n", "<br>")
+        html_string = html.escape(body_string).replace("\n", "<br>")
         return html_string
 
     raise NotImplementedError("Don't know how to handle message of type %s" % (
