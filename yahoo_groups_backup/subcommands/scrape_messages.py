@@ -10,7 +10,6 @@ Options:
   --login=<login>          Yahoo! login, required for private groups.
   --password=<password>    Yahoo! password, required for private groups.
   --driver=<driver>        Specify a webdriver for Selenium [default: firefox]
-  -h --help                Show this screen
 """
 import pymongo
 import schema
@@ -26,8 +25,6 @@ args_schema = schema.Schema({
 
 
 def command(arguments):
-    import pprint; pprint.pprint(arguments)
-
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
     scraper = YahooBackupScraper(

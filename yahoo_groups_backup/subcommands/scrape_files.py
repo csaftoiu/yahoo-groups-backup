@@ -10,7 +10,6 @@ Options:
   --login=<login>          Yahoo! login, required for private groups.
   --password=<password>    Yahoo! password, required for private groups.
   --driver=<driver>        Specify a webdriver for Selenium [default: firefox]
-  -h --help                Show this screen
 """
 import pymongo
 import requests

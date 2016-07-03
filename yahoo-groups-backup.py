@@ -18,7 +18,7 @@ Commands:
 Options:
   -h --help                      Show this screen
   -c --config=<config_file>      Use config file, if it exists. Command-line
-                                 settings override the config file settings
+                                 settings override the config file settings.
                                  "--mongo-host=foo" converts to
                                  "mongo-host: foo" in the config
                                  file. [default: settings.yaml]

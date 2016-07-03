@@ -3,7 +3,6 @@ Usage:
   yahoo-groups-backup.py dump_site [-h|--help] [options] <group_name> <root_dir>
 
 Options:
-  -h --help                        Show this screen
   --msgdb-page-size=<page_size>    Number of messages to store in each local
                                    file. Larger means less files but each file
                                    is larger, while smaller means more files
