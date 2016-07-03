@@ -1,6 +1,5 @@
 import email
 import html
-import re
 import sys
 import traceback
 
@@ -104,8 +103,16 @@ def html_from_message(message, use_yahoo_on_fail=False):
 
     # otherwise, try to render it ourselves
     try:
-        return html_from_yahoo_raw_email(message['rawEmail'])
-    except:
+        result = html_from_yahoo_raw_email(message['rawEmail'])
+
+        # Yahoo! strips out attachments, so if the sender sent their email as
+        # an attachment, it won't be available in the raw email. In this case,
+        # use Yahoo!'s rendering.
+        if 'Attachment content not displayed' in result:
+            return message['messageBody']
+
+        return result
+    except Exception:
         if use_yahoo_on_fail:
             eprint("Failed to process raw email from Yahoo! message:")
             traceback.print_exc(file=sys.stderr)

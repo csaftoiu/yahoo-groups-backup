@@ -62,7 +62,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
         columns: [
           {
             data: "subject",
-            className: "col-xs-4  col-sm-4 col-md-5 col-lg-6",
+            className: "col-xs-4  col-sm-4 col-md-5 col-lg-6 truncated",
             // render link to message
             render: function (data, type, row, meta) {
               if (type === 'display') {
@@ -78,7 +78,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           },
           {
             data: null,  // this column is compiled from multiple parts of the row
-            className: "col-xs-4  col-sm-3 col-md-3 col-lg-3",
+            className: "col-xs-4  col-sm-3 col-md-3 col-lg-3 truncated",
             render: function (data, type, row, meta) {
               if (type === 'display' || type === 'filter' || type === 'sort') {
                 return $filter('escapeHtml')($filter('messageAuthor')(row, false));
@@ -89,7 +89,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           },
           {
             data: "timestamp",
-            className: "col-xs-4  col-sm-3 col-md-3 col-lg-2",
+            className: "col-xs-4  col-sm-3 col-md-3 col-lg-2 truncated",
             render: function (data, type, row, meta) {
               // display & filter based on rendered date
               if (type === 'display' || type === 'filter') {
@@ -102,7 +102,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           },
           {
             data: "id",
-            className: "hidden-xs col-sm-2 col-md-1 col-lg-1",
+            className: "hidden-xs col-sm-2 col-md-1 col-lg-1 truncated",
             // render link to message
             render: function (data, type, row, meta) {
               if (type === 'display') {

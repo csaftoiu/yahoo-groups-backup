@@ -74,11 +74,7 @@ angular.module('staticyahoo.index')
         return $injector.get('MessageData').getMessageData(id);
       })).then(function (datas) {
         return datas.map(function (data) {
-          var fullText = $filter('htmlToPlaintext')(data.messageBody);
-          if (fullText.length > 77) {
-            fullText = fullText.slice(0, 77) + "...";
-          }
-          return fullText;
+          return $filter('messageSnippet')(data.messageBody, 300);
         });
       });
     };

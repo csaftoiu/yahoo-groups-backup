@@ -2,3 +2,14 @@ span.snippet {
     font-size: 85%;
     color: gray;
 }
+
+/**
+ * From http://stackoverflow.com/a/19342181/15055
+ * Probably only works if the cells are already sized.
+ */
+td.truncated {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 1px;
+}

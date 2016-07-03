@@ -267,13 +267,13 @@ angular
     dump_jsonp_records('data.index.js', [
         {
             "id": message['_id'],
-            "subject": unescape_yahoo_html(message.get('subject', '')),
+            "subject": unescape_yahoo_html(message.get('subject', '(unknown)')),
             "authorName": message.get('authorName', ''),
             "profile": message.get('profile', ''),
             "from": mask_email(message.get('from', '')),
             "timestamp": message.get('postDate', 0),
         }
-        for message in db.yield_all_messages()
+        for message in db.yield_all_messages(start=arguments['--redact-before'])
     ])
 
     # -----------------

@@ -2,6 +2,9 @@
 
 (function () {
 
+  /**
+   * Strip all the html elements out of the given html string.
+   */
   var stripHtml = (function () {
     // re-use element creation
     var tmpEl = document.createElement("DIV");
@@ -9,11 +12,6 @@
       if (!html) {
         return "";
       }
-
-      // replace a few things in the HTML to make the output nicer
-      html = html.replace(/<br>/g, "\n");
-      console.log(html);
-      html = html.replace(/(<p>|<\/p>|<div>|<\/div>)/g, " ");
 
       tmpEl.innerHTML = html;
       return tmpEl.textContent || tmpEl.innerText || "";
@@ -26,7 +24,6 @@
     .filter('htmlToPlaintext', function () {
 
       return function (text) {
-        console.log(text);
         return stripHtml(text);
       };
     }
