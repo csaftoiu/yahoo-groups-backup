@@ -267,7 +267,7 @@ angular
 
     def get_message_body(message):
         if message['_id'] < arguments['--redact-before']:
-            return "(redacted for testing)"
+            return "<div class='alert alert-info text-center'>Redacted for testing.</div>"
 
         try:
             return html_from_message(message)

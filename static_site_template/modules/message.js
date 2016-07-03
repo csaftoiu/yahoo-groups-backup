@@ -35,59 +35,47 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
       }
 
       // otherwise, new promise and new file
-      var deferred = $q.defer();
       cache.filename = fn;
-      cache.promise = deferred.promise;
-      LocalJSONP(fn).then(function (data) {
-        deferred.resolve(procFileData(data));
-        return data;
+      cache.promise = LocalJSONP(fn).then(function (data) {
+        return procFileData(data);
       });
+
       return cache.promise;
     };
 
-    return {
-      /**
-       * Get the message data for the message of the given id.
-       * Return the promise which succeeds with combined index & message body data, or fails if
-       * message was not found.
-       */
-      getMessageData: function (id) {
-        if (typeof id === "string") {
-          id = parseInt(id);
+    /**
+     * Get the message data for the message of the given id.
+     * Return the promise which succeeds with combined index & message body data, or fails if
+     * message was not found.
+     */
+    var getMessageData = function (id) {
+      if (typeof id === "string") {
+        id = parseInt(id);
+      }
+
+      return $q.all([IndexData.getRow(id), getFileData(idToFilename(id))]).then(function (vals) {
+        var indexRow = vals[0];
+        var msgData = vals[1];
+
+        if (!indexRow) {
+          console.log("Message with id " + id + " does not exist");
+          return null;
         }
 
-        var deferred = $q.defer();
+        if (!msgData.idToData[id]) {
+          console.log("Message with id " + id + " not found in message data");
+          return null;
+        }
 
-        // wait until index data is loaded
-        IndexData.promise.then(function (data) {
-          var indexRow = IndexData.lokiCollection.find({ id: id })[0];
+        var result = {};
+        angular.merge(result, indexRow);
+        angular.merge(result, msgData.idToData[id]);
+        return result;
+      });
+    };
 
-          if (!indexRow) {
-            console.log("Message " + id + " not found in index");
-            deferred.reject();
-            return data; // pass through data
-          }
-
-          getFileData(idToFilename(id)).then(function (msgData) {
-            if (!msgData.idToData[id]) {
-              console.log("Message " + id + " not found in message data");
-              deferred.reject();
-              return data; // pass through data
-            }
-
-            var result = {};
-            angular.merge(result, indexRow);
-            angular.merge(result, msgData.idToData[id]);
-            deferred.resolve(result);
-
-            return data; // pass through data
-          });
-
-          return data; // pass through data
-        });
-
-        return deferred.promise;
-      }
+    return {
+      getMessageData: getMessageData
     };
 
   })
@@ -106,6 +94,7 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
       // we know the id
       id: $stateParams.id,
       // keep prev and next as the same value in case they accidentally click on it while something is loading
+      // better than setting it to +1/-1 since then they may end up on a message that doesn't exist
       prev: $stateParams.id,
       next: $stateParams.id,
       missing: false
@@ -130,25 +119,35 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
 
     MessageData.getMessageData($stateParams.id).then(function (msgData) {
       $scope.loading = false;
-      $scope.headers[FROM].value = MessageIndex.formatMessageAuthor(msgData, true);
-      $scope.headers[DATE].value = $filter('date')(msgData.timestamp * 1000, $rootScope.dateFormat);
-      $scope.headers[SUBJECT].value = msgData.subject;
 
-      $scope.message = {
-        id: msgData.id,
-        prev: msgData.prevInTime,
-        next: msgData.nextInTime,
-        messageBody: $sce.trustAsHtml(msgData.messageBody),
-        missing: false
-      };
+      if (msgData) {
+        $scope.headers[FROM].value = MessageIndex.formatMessageAuthor(msgData, true);
+        $scope.headers[DATE].value = $filter('date')(msgData.timestamp * 1000, $rootScope.dateFormat);
+        $scope.headers[SUBJECT].value = msgData.subject;
+
+        $scope.message = {
+          id: msgData.id,
+          prev: msgData.prevInTime,
+          next: msgData.nextInTime,
+          messageBody: $sce.trustAsHtml(msgData.messageBody),
+          missing: false
+        };
+      } else {
+        $scope.message = {
+          id: $stateParams.id,
+          prev: +$stateParams.id - 1,
+          next: +$stateParams.id + 1,
+          missing: true
+        };
+      }
     }, function () {
-      // failed
+      // failed due to network error or something? donno what to do here
       $scope.loading = false;
+      $scope.error = true;
       $scope.message = {
         id: $stateParams.id,
         prev: +$stateParams.id - 1,
-        next: +$stateParams.id + 1,
-        missing: true
+        next: +$stateParams.id + 1
       };
     });
 

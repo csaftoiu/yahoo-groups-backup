@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('staticyahoo.index', [])
+angular.module('staticyahoo.index', ['staticyahoo.message'])
 
   // from http://stackoverflow.com/questions/14462612/escape-html-text-in-an-angularjs-directive
   .filter('escapeHtml', function () {
@@ -21,7 +21,10 @@ angular.module('staticyahoo.index', [])
     }
   })
 
-  .factory('IndexData', function (LocalJSONP, $state) {
+  /**
+   * Local data source for the index data.
+   */
+  .factory('LocalIndexDataSource', function (LocalJSONP, $state) {
     // start loading the file
     var dataPromise = LocalJSONP('./data/data.index.js');
 
@@ -59,15 +62,92 @@ angular.module('staticyahoo.index', [])
       for (i=0; i < data.length; i++) {
         coll.insert(data[i]);
       }
+
       return data;
     });
 
     return {
       // promise for the data
-      promise: dataPromise,
+      getData: function () { return dataPromise; },
       // the loki collection
       lokiCollection: coll
     };
+  })
+
+  /**
+   * Local implementation of the IndexData service
+   */
+  .factory('IndexData__Local', function ($q, LocalIndexDataSource) {
+    var indexView = LocalIndexDataSource.lokiCollection.getDynamicView("indexTable");
+    if (!indexView) {
+      indexView = LocalIndexDataSource.lokiCollection.addDynamicView("indexTable");
+    }
+
+    /**
+     * Get the index rows matching a request
+     * @param request An object with the following keys:
+     * {
+     *     start: The start index into the total returned data to get
+     *     length: The length to get
+     *     sortColumn: The sort column name, or null if no sort
+     *     sortAscending: Whether to sort by ascending.
+     *  }
+     * @returns A promise returning an object with: {
+     *     totalLength: The total length of everything that matched
+     *     filteredLength: The length of just what was returned
+     *     data: The data
+     * }
+     */
+
+    var getSortedFilteredRows = function (request) {
+      return LocalIndexDataSource.getData().then(function (data) {
+        // apply the sort to the view, if there is one
+        if (request.sortColumn) {
+          var desc = !request.sortAscending;
+          indexView.applySimpleSort(request.sortColumn, desc);
+        }
+
+        // resolve the data
+        var sortedFilteredData = indexView.data();
+
+        return {
+          totalLength: data.length,
+          filteredLength: sortedFilteredData.length,
+          data: sortedFilteredData.slice(request.start, request.start + request.length)
+        };
+      });
+    };
+
+    /**
+     * Get the row corresponding to a given id.
+     * @param id The message id
+     * @returns A promise returning the row for the id, or succeeding with null if the message
+     * does not exit.
+     */
+    var getRow = function (id) {
+      return LocalIndexDataSource.getData().then(function () {
+        var indexRow = LocalIndexDataSource.lokiCollection.find({ id: id })[0];
+
+        if (!indexRow) {
+          console.log("Message " + id + " not found in index");
+          return null;
+        } else {
+          return indexRow;
+        }
+      });
+    };
+
+    return {
+      getSortedFilteredRows: getSortedFilteredRows,
+      getRow: getRow
+    };
+  })
+
+  /**
+   * Proxy for either local or remote index data.
+   */
+  .factory('IndexData', function ($injector) {
+    return $injector.get('IndexData__Local');
   })
 
   .factory('MessageIndex', function () {
@@ -110,13 +190,9 @@ angular.module('staticyahoo.index', [])
 
   .controller('IndexCtrl', function (
       $scope, $timeout, $filter, $rootScope, $state,
-      IndexData, MessageIndex
+      IndexData, MessageIndex, MessageData
   ) {
 
-    var indexView = IndexData.lokiCollection.getDynamicView("indexTable");
-    if (!indexView) {
-      indexView = IndexData.lokiCollection.addDynamicView("indexTable");
-    }
 
     // Note: IndexData loads & indexes right away
     // this is fine as it only happens once and doesn't take long
@@ -147,26 +223,18 @@ angular.module('staticyahoo.index', [])
 
         // data source is actually taken from an in-memory js database
         ajax: function (request, callback, settings) {
-          console.log("Index table ajax called:", request, settings);
-
-          IndexData.promise.then(function (data) {
-            // apply the sort to the view, if there is one
-            if (request.order[0]) {
-              var propName = request.columns[request.order[0].column].data;
-              var desc = request.order[0].dir === "desc";
-              indexView.applySimpleSort(propName, desc);
-            }
-
-            // resolve the data
-            var sortedFilteredData = indexView.data();
-
+          IndexData.getSortedFilteredRows({
+            start: request.start,
+            length: request.length,
+            sortColumn: request.order[0] ? request.columns[request.order[0].column].data : null,
+            sortAscending: request.order[0] ? request.order[0].dir !== "desc" : false
+          }).then(function (result) {
             callback({
               draw: request.draw,
-              recordsTotal: data.length,
-              recordsFiltered: sortedFilteredData.length,
-              data: sortedFilteredData.slice(request.start, request.start + request.length)
+              recordsTotal: result.totalLength,
+              recordsFiltered: result.filteredLength,
+              data: result.data
             });
-            return data;
           });
         },
 
@@ -184,7 +252,11 @@ angular.module('staticyahoo.index', [])
             // render link to message
             render: function (data, type, row, meta) {
               if (type === 'display') {
-                return '<a href="' + messageUrl(row.id) + '">' + $filter('escapeHtml')(data) + '</a>';
+                var subj_link = '<a href="' + messageUrl(row.id) + '">' + $filter('escapeHtml')(data) + '</a>';
+
+                var res = subj_link + '<br><small>test</small>';
+
+                return res;
               }
 
               return data;

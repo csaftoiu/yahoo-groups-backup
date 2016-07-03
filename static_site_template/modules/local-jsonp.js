@@ -65,40 +65,32 @@ angular.module('staticyahoo.local-jsonp', [])
     };
 
     var LocalJSONP = function (path) {
-      var deferred = $q.defer();
-
       if (state.promise) {
         console.log("Waiting for '" + state.path + "' to finish loading first...");
 
-        state.promise.then(function (data) {
+        return state.promise.then(function () {
           console.log("Current path finished, now loading '" + path + "'...");
-          LocalJSONP(path).then(function (data) {
-            deferred.resolve(data);
-            return data;
-          });
-
-          return data;
+          return LocalJSONP(path);
         });
-
-        return deferred.promise;
       }
 
-      loadLocalJS(path, function (data) {
-        deferred.resolve(data);
+      var promise = $q(function (resolve, reject) {
+        loadLocalJS(path, function (data) {
+          resolve(data);
+        });
       });
 
       // set current promise
-      state.promise = deferred.promise;
+      state.promise = promise;
       state.path = path;
 
       // clear current promise when data is loaded
-      state.promise.then(function (data) {
+      state.promise.then(function () {
         state.promise = null;
         state.path = null;
-        return data;
       });
 
-      return deferred.promise;
+      return promise;
     };
 
     // add helpers so can hook into global window

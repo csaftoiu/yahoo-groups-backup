@@ -58,7 +58,7 @@
   </div>
 
   <!-- second view - only show when finished loading -->
-  <div ng-show="configLoaded">
+  <div ng-if="configLoaded">  <!-- ng-if is important, so nothing tries to use config until it is loaded -->
   <div ng-include="'./modules/nav.html'"></div>
 
   <div class="text-center">

@@ -33,10 +33,13 @@
       <img src="./img/loader.gif">
       </div>
     <div ng-if="!loading">
-      <div ng-if="message.missing" class="text-center">
+      <div ng-if="message.missing" class="alert alert-warning text-center">
         This message is missing or has been deleted from the group.
       </div>
       <div ng-if="!message.missing" ng-bind-html="message.messageBody"></div>
+      <div ng-if="error" class="alert alert-danger text-center">
+        Error loading message from server.
+      </div>
     </div>
   </div>
 </div>
