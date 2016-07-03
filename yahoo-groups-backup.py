@@ -166,20 +166,35 @@ def dump_site(arguments):
     # -----------------
     # render the templates
     eprint("Rendering templates...")
-    with open(P.join(dest_root_dir, 'modules', 'load-templates.js'), 'w') as f:
+    def splitall(path):
+        """Split a path into a list of path components, e.g. 'a/b/c' --> ['a', 'b', 'c']."""
+        d, f = P.split(path)
+        if d == path: return [d]
+        if f == path: return [f]
+        return splitall(d) + [f]
+
+    def template_filename(path):
+        """Given a path to a template file, e.g. 'foo/static_site_template/modules/index/index.html', return
+        the template filename as angular expects it, e.g. './modules/index/index.html'."""
+        parts = splitall(path)
+        parts = ['.'] + parts[parts.index('modules'):]
+        return '/'.join(parts)
+
+    with open(P.join(dest_root_dir, 'modules', 'core', 'load-templates.js'), 'w') as f:
         cache_puts = []
-        for fn in os.listdir(P.join(source_root_dir, 'modules')):
-            if not fn.endswith(".html"):
-                continue
-            with open(P.join(source_root_dir, 'modules', fn), "r") as template_f:
-                data = template_f.read()
-            cache_puts.append(("./modules/%s" % fn, data))
+        for dirpath, _, fns in os.walk(P.join(source_root_dir, 'modules')):
+            for fn in fns:
+                if not fn.endswith(".html"):
+                    continue
+                with open(P.join(dirpath, fn), "r") as template_f:
+                    data = template_f.read()
+                cache_puts.append((template_filename(P.join(dirpath, fn)), data))
 
         f.write("""\
 'use strict';
 
 angular
-  .module('staticyahoo.app')
+  .module('staticyahoo.core')
 
   .run(function ($templateCache) {
 %s
@@ -309,11 +324,12 @@ angular
     # -----------------
     # done
     eprint("Site is ready in '%s'!" % dest_root_dir)
-    eprint("")
-    eprint("NOTE: Failed to render the following messages from the raw email")
-    eprint("data. They may not have rendered properly.")
-    eprint("")
-    eprint("[%s]" % ", ".join(map(str, sorted(failed_render_messages))))
+    if failed_render_messages:
+        eprint("")
+        eprint("NOTE: Failed to render the following messages from the raw email")
+        eprint("data. They may not have rendered properly.")
+        eprint("")
+        eprint("[%s]" % ", ".join(map(str, sorted(failed_render_messages))))
 
 
 def main():

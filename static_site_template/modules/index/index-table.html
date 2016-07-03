@@ -1,0 +1,23 @@
+<div ng-controller="IndexCtrl" ng-show="showMessageIndex">
+  <div ng-show="!tableInitialized">
+    <div class="text-center">
+    <br>
+    <img src="./img/loader.gif">
+    </div>
+  </div>
+  <div ng-show="tableInitialized">
+  <table id="messageIndexTable" class="table table-hover table-bordered"
+         cellspacing="0" width="100%">
+    <thead>
+    <tr class="row">
+      <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
+      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
+      <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
+      <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  </div>
+</div>

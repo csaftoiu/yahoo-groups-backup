@@ -2,11 +2,11 @@
 
 angular
   .module('staticyahoo.app', [
-    'staticyahoo.local-jsonp',
+    'ui.bootstrap',
+    'staticyahoo.core',
     'staticyahoo.nav',
     'staticyahoo.index',
-    'staticyahoo.message',
-    'ui.bootstrap'
+    'staticyahoo.message'
   ])
 
   .run(function ($rootScope, LocalJSONP) {

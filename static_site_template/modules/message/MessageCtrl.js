@@ -1,88 +1,10 @@
 'use strict';
 
-angular.module('staticyahoo.message', ['staticyahoo.index'])
-
-  .factory('MessageData', function ($rootScope, $q, LocalJSONP, IndexData) {
-
-    var idToFilename = function (i) {
-      var page = $rootScope.config.messageDbPageSize;
-
-      var start = Math.floor(i / page) * page;
-      var end = start + page;
-
-      return './data/data.messageData-' + start + '-' + end + '.js';
-    };
-
-    var procFileData = function (data) {
-      // map the data
-      var idToData = {};
-      for (var i=0; i < data.length; i++) {
-        idToData[data[i].id] = data[i];
-      }
-
-      return {
-        data: data,
-        idToData: idToData
-      };
-    };
-
-    var getFileData = function (fn) {
-      var cache = getFileData.cache = getFileData.cache || {};
-
-      // if cache already has this file, return the same promise
-      if (cache.filename === fn) {
-        return cache.promise;
-      }
-
-      // otherwise, new promise and new file
-      cache.filename = fn;
-      cache.promise = LocalJSONP(fn).then(function (data) {
-        return procFileData(data);
-      });
-
-      return cache.promise;
-    };
-
-    /**
-     * Get the message data for the message of the given id.
-     * Return the promise which succeeds with combined index & message body data, or fails if
-     * message was not found.
-     */
-    var getMessageData = function (id) {
-      if (typeof id === "string") {
-        id = parseInt(id);
-      }
-
-      return $q.all([IndexData.getRow(id), getFileData(idToFilename(id))]).then(function (vals) {
-        var indexRow = vals[0];
-        var msgData = vals[1];
-
-        if (!indexRow) {
-          console.log("Message with id " + id + " does not exist");
-          return null;
-        }
-
-        if (!msgData.idToData[id]) {
-          console.log("Message with id " + id + " not found in message data");
-          return null;
-        }
-
-        var result = {};
-        angular.merge(result, indexRow);
-        angular.merge(result, msgData.idToData[id]);
-        return result;
-      });
-    };
-
-    return {
-      getMessageData: getMessageData
-    };
-
-  })
+angular.module('staticyahoo.message')
 
   .controller('MessageCtrl', function (
       $rootScope, $scope, $state, $filter, $stateParams, $sce,
-      MessageData, MessageIndex
+      MessageData
   ) {
     var FROM = 0, DATE = 1, SUBJECT = 2, LINK = 3;
     $scope.headers = [];
@@ -121,7 +43,7 @@ angular.module('staticyahoo.message', ['staticyahoo.index'])
       $scope.loading = false;
 
       if (msgData) {
-        $scope.headers[FROM].value = MessageIndex.formatMessageAuthor(msgData, true);
+        $scope.headers[FROM].value = $filter('messageAuthor')(msgData, true);
         $scope.headers[DATE].value = $filter('date')(msgData.timestamp * 1000, $rootScope.dateFormat);
         $scope.headers[SUBJECT].value = msgData.subject;
 

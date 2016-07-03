@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('staticyahoo.local-jsonp', [])
+angular.module('staticyahoo.core')
 
   /**
    * Provide a function LocalJSONP(path) which loads the js file

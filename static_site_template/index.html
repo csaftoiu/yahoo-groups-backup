@@ -11,6 +11,7 @@
   <!-- css -->
   <link href="./css/bootstrap.min.css" rel="stylesheet">
   <link href="./css/dataTables.bootstrap.min.css" rel="stylesheet">
+  <link href="./css/snippet.css" rel="stylesheet">
 
   <style type="text/css">
     body {
@@ -33,63 +34,43 @@
   <!-- all content in one initially-hidden container -->
   <div id="script-container" class="container" style="display: none;">
 
-  <!-- first view - show until config loaded -->
-  <div ng-show="!configLoaded" class="text-center">
-    <!-- show blank nav so page load looks nicer-->
-    <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-header">
-        <button type="button" class="navbar-toggle">
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="./index.html">&nbsp;</a>
+    <!-- first view - show until config loaded -->
+    <div ng-show="!configLoaded" class="text-center">
+      <!-- show blank nav so page load looks nicer-->
+      <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="./index.html">&nbsp;</a>
+        </div>
+        <div class="collapse navbar-collapse" uib-collapse="true">
+          </ul>
+        </div>
       </div>
-      <div class="collapse navbar-collapse" uib-collapse="true">
-        </ul>
-      </div>
-    </div>
-    <!-- show a loader, padded the same as when index page is loaded -->
-    <div class="text-center">
-      <h1>&nbsp;</h1>
-    </div>
-    <br>
-    <img src="./img/loader.gif">
-  </div>
-
-  <!-- second view - only show when finished loading -->
-  <div ng-if="configLoaded">  <!-- ng-if is important, so nothing tries to use config until it is loaded -->
-  <div ng-include="'./modules/nav.html'"></div>
-
-  <div class="text-center">
-    <h1 ng-if="config.groupName">{{ config.groupName }} Yahoo! Group Backup</h1>
-    <h1 ng-if="!config.groupName">Yahoo! Group Backup</h1>
-  </div>
-
-  <div ng-controller="IndexCtrl" ng-show="showMessageIndex">
-    <div ng-show="!tableInitialized">
+      <!-- show a loader, padded the same as when index page is loaded -->
       <div class="text-center">
+        <h1>&nbsp;</h1>
+      </div>
       <br>
       <img src="./img/loader.gif">
+    </div>
+
+    <!-- second view - only show when finished loading -->
+    <div ng-if="configLoaded">  <!-- ng-if is important, so nothing tries to use config until it is loaded -->
+      <div ng-include="'./modules/nav.html'"></div>
+
+      <div class="text-center">
+        <h1 ng-if="config.groupName">{{ config.groupName }} Yahoo! Group Backup</h1>
+        <h1 ng-if="!config.groupName">Yahoo! Group Backup</h1>
       </div>
+
+      <div ng-include="'./modules/index/index-table.html'"></div>
+
+      <section ui-view></section>
     </div>
-    <div ng-show="tableInitialized">
-    <table id="messageIndexTable" class="table table-hover table-bordered" cellspacing="0" width="100%">
-      <thead>
-      <tr class="row">
-        <th class="col-xs-4  col-sm-4 col-md-5 col-lg-6">Subject</th>
-        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-3">Author</th>
-        <th class="col-xs-4  col-sm-3 col-md-3 col-lg-2">Posted<span id="tz"></span></th>
-        <th class="hidden-xs col-sm-2 col-md-1 col-lg-1">#</th>
-      </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-    </div>
-  </div>
-  <section ui-view></section>
-  </div>
 
   </div>
 
@@ -119,13 +100,27 @@
   <script type="text/javascript" src="./js/ui-bootstrap-custom-tpls-1.3.3.min.js"></script>
 
   <!-- modules -->
-  <script type="text/javascript" src="./modules/app.js"></script>
-  <script type="text/javascript" src="./modules/local-jsonp.js"></script>
-  <script type="text/javascript" src="./modules/nav.js"></script>
-  <script type="text/javascript" src="./modules/index.js"></script>
-  <script type="text/javascript" src="./modules/message.js"></script>
+  <script type="text/javascript" src="./modules/core/module.js"></script>
+  <script type="text/javascript" src="./modules/core/escapeHtml.filter.js"></script>
+  <script type="text/javascript" src="./modules/core/stripHtml.filter.js"></script>
+  <script type="text/javascript" src="./modules/core/local-jsonp.js"></script>
+  <script type="text/javascript" src="./modules/core/load-templates.js"></script>
 
-  <script type="text/javascript" src="./modules/load-templates.js"></script>
+  <script type="text/javascript" src="./modules/nav.js"></script>
+
+  <script type="text/javascript" src="./modules/index/module.js"></script>
+  <script type="text/javascript" src="./modules/index/IndexCtrl.js"></script>
+  <script type="text/javascript" src="./modules/index/IndexData__Local.js"></script>
+  <script type="text/javascript" src="./modules/index/IndexData.js"></script>
+
+  <script type="text/javascript" src="./modules/message/module.js"></script>
+  <script type="text/javascript" src="./modules/message/messageAuthor.filter.js"></script>
+  <script type="text/javascript" src="./modules/message/MessageData__Local.js"></script>
+  <script type="text/javascript" src="./modules/message/MessageData.js"></script>
+  <script type="text/javascript" src="./modules/message/MessageCtrl.js"></script>
+
+  <script type="text/javascript" src="./modules/app.js"></script>
+
 
   <!-- ================================= -->
   <!-- ========= bootstrap app ========= -->
