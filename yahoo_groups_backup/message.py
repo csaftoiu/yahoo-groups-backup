@@ -1,11 +1,38 @@
 import email
 import html
+import re
 import sys
 import traceback
 
 
 def eprint(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
+
+
+def unescape_entity_refs(text):
+    """Removes HTML or XML character references and entities from a text string.
+
+    :param text The HTML (or XML) source text.
+    :return The plain text, as a Unicode string, if necessary."""
+    def fixup(m):
+        text = m.group(0)
+        if text[:2] == "&#":
+            # character reference
+            try:
+                if text[:3] == "&#x":
+                    return chr(int(text[3:-1], 16))
+                else:
+                    return chr(int(text[2:-1]))
+            except ValueError:
+                pass
+        else:
+            # named entity
+            try:
+                text = chr(html.entities.name2codepoint[text[1:-1]])
+            except KeyError:
+                pass
+        return text  # leave as is
+    return re.sub("&#?\w+;", fixup, text)
 
 
 def unescape_yahoo_html(s):
@@ -63,7 +90,10 @@ def html_from_email_message(msg):
 
     if msg.get_content_subtype() == 'plain':
         # render plain text in reasonable-looking HTML
-        html_string = html.escape(body_string).replace("\n", "<br>")
+        # try unescaping character references, for some reason
+        html_string = unescape_entity_refs(body_string)
+        # then, escape what is necessary, replace newlines with <br>, and we're good to go!
+        html_string = html.escape(html_string).replace("\n", "<br>")
         return html_string
 
     raise NotImplementedError("Don't know how to handle message of type %s" % (

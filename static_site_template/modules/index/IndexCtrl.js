@@ -3,10 +3,9 @@
 angular.module('staticyahoo.index', ['staticyahoo.message'])
 
   .controller('IndexCtrl', function (
-      $scope, $timeout, $filter, $rootScope, $state,
-      IndexData, MessageData
+      $scope, $timeout, $filter, $rootScope, $state, $compile,
+      IndexData
   ) {
-
 
     // Note: IndexData loads & indexes right away
     // this is fine as it only happens once and doesn't take long
@@ -40,7 +39,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           IndexData.getSortedFilteredRows({
             start: request.start,
             length: request.length,
-            sortColumn: request.order[0] ? request.columns[request.order[0].column].data : null,
+            sortColumn: request.order[0] ? request.columns[request.order[0].column].name : null,
             sortAscending: request.order[0] ? request.order[0].dir !== "desc" : false
           }).then(function (result) {
             callback({
@@ -62,6 +61,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
         columns: [
           {
             data: "subject",
+            name: "subject",
             className: "col-xs-4  col-sm-4 col-md-5 col-lg-6 truncated",
             // render link to message
             render: function (data, type, row, meta) {
@@ -77,11 +77,12 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
             }
           },
           {
-            data: null,  // this column is compiled from multiple parts of the row
+            data: "shortDisplayAuthor",
+            name: "shortDisplayAuthor",
             className: "col-xs-4  col-sm-3 col-md-3 col-lg-3 truncated",
             render: function (data, type, row, meta) {
               if (type === 'display' || type === 'filter' || type === 'sort') {
-                return $filter('escapeHtml')($filter('messageAuthor')(row, false));
+                return $filter('escapeHtml')(data);
               }
 
               return data;
@@ -89,6 +90,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           },
           {
             data: "timestamp",
+            name: "timestamp",
             className: "col-xs-4  col-sm-3 col-md-3 col-lg-2 truncated",
             render: function (data, type, row, meta) {
               // display & filter based on rendered date
@@ -102,6 +104,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
           },
           {
             data: "id",
+            name: "id",
             className: "hidden-xs col-sm-2 col-md-1 col-lg-1 truncated",
             // render link to message
             render: function (data, type, row, meta) {

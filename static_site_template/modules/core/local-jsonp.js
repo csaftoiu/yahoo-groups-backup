@@ -66,14 +66,14 @@ angular.module('staticyahoo.core')
 
     var LocalJSONP = function (path) {
       if (state.promise) {
-        console.log("Waiting for '" + state.path + "' to finish loading first...");
+        console.log("JSONP: WAITING '" + path + "'");
 
         return state.promise.then(function () {
-          console.log("Current path finished, now loading '" + path + "'...");
           return LocalJSONP(path);
         });
       }
 
+      console.log("JSONP: LOADING '" + path + "'");
       var promise = $q(function (resolve, reject) {
         loadLocalJS(path, function (data) {
           resolve(data);

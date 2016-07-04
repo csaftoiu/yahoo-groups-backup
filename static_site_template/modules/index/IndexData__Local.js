@@ -1,30 +1,30 @@
 'use strict';
 
+
+
 angular.module('staticyahoo.index')
 
   /**
    * Local data source for the index data.
    */
-  .factory('LocalIndexDataSource', function (LocalJSONP, $state) {
-    // start loading the file
-    var dataPromise = LocalJSONP('./data/data.index.js');
-
+  .factory('LocalIndexDataSource', function ($filter, $q, $promiseForEach,
+                                             LocalJSONP) {
     // initialize the loki database
     var db = new loki();
     // index everything we want to sort by
     var coll = db.addCollection('index', {
-      indices: ["author", "id", "subject", "timestamp"]
+      indices: ["shortDisplayAuthor", "id", "subject", "timestamp"]
     });
 
-    // map message id to the index data
-    var idToIndex = {};
-
-    dataPromise.then(function (data) {
+    var dataPromise = LocalJSONP('./data/data.index.js').then(function (data) {
       var i;
 
       console.log("Index data loaded!");
 
-      // Calculate prevInTime/nextInTime
+      // Calculate:
+      // * prevInTime
+      // * nextInTime
+      // * shortAuthor (displayed in index, needed for sorting)
       for (i=0; i < data.length; i++) {
         if (i === 0) {
           data[i].nextInTime = 0;
@@ -37,6 +37,8 @@ angular.module('staticyahoo.index')
         } else {
           data[i].prevInTime = data[i+1].id;
         }
+
+        data[i].shortDisplayAuthor = $filter('messageAuthor')(data[i], false);
       }
 
       // insert into loki collection
@@ -58,7 +60,8 @@ angular.module('staticyahoo.index')
   /**
    * Local implementation of the IndexData service
    */
-  .factory('IndexData__Local', function ($q, $injector, $filter, LocalIndexDataSource) {
+  .factory('IndexData__Local', function ($q, $injector, $filter, $promiseChainMap,
+                                         LocalIndexDataSource) {
     var indexView = LocalIndexDataSource.lokiCollection.getDynamicView("indexTable");
     if (!indexView) {
       indexView = LocalIndexDataSource.lokiCollection.addDynamicView("indexTable");
@@ -69,11 +72,8 @@ angular.module('staticyahoo.index')
      * @param ids
      */
     var getMessageSnippets = function (ids) {
-      return $q.all(ids.map(function (id) {
-        // $injector to avoid circular imports
-        return $injector.get('MessageData').getMessageData(id);
-      })).then(function (datas) {
-        return datas.map(function (data) {
+      return $promiseChainMap(ids, function (id) {
+        return $injector.get('MessageData').getMessageData(id).then(function (data) {
           return $filter('messageSnippet')(data.messageBody, 300);
         });
       });

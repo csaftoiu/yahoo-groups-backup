@@ -2,10 +2,7 @@
 
 angular.module('staticyahoo.message')
 
-  /**
-   * Service for getting message data from the file system.
-   */
-  .factory('MessageData__Local', function ($rootScope, $q, LocalJSONP, IndexData) {
+  .factory('LocalMessageDataSource', function ($rootScope, LocalJSONP) {
     var idToFilename = function (i) {
       var page = $rootScope.config.messageDbPageSize;
 
@@ -46,6 +43,33 @@ angular.module('staticyahoo.message')
     };
 
     /**
+     * Get just the message body.
+     */
+    var getMessageBody = function (id) {
+      if (typeof id === "string") {
+        id = parseInt(id);
+      }
+
+      return getFileData(idToFilename(id)).then(function (msgData) {
+        if (!msgData.idToData[id]) {
+          console.log("Message with id " + id + " not found in message data");
+          return null;
+        }
+
+        return msgData.idToData[id].messageBody;
+      });
+    };
+
+    return {
+      getMessageBody: getMessageBody
+    };
+  })
+
+  /**
+   * Service for getting message data from the file system.
+   */
+  .factory('MessageData__Local', function ($q, IndexData, LocalMessageDataSource) {
+    /**
      * Get the message data for the message of the given id.
      * Return the promise which succeeds with combined index & message body data, or fails if
      * message was not found.
@@ -60,25 +84,22 @@ angular.module('staticyahoo.message')
 
       return $q.all([
         IndexData.getRow(id),
-        getFileData(idToFilename(id))
+        LocalMessageDataSource.getMessageBody(id)
       ]).then(function (vals) {
         var indexRow = vals[0];
-        var msgData = vals[1];
+        var msgBody = vals[1];
 
         if (!indexRow) {
-          console.log("Message with id " + id + " does not exist");
           return null;
         }
 
-        // get the particular message we need
-        if (!msgData.idToData[id]) {
-          console.log("Message with id " + id + " not found in message data");
-          return null;
+        if (!msgBody) {
+          throw new Error("Row exists, but missing message body?");
         }
 
         var result = {};
         angular.merge(result, indexRow);
-        angular.merge(result, msgData.idToData[id]);
+        result.messageBody = msgBody;
         return result;
       });
     };
