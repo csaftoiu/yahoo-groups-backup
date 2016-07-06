@@ -62,9 +62,9 @@
     <div ng-if="configLoaded">  <!-- ng-if is important, so nothing tries to use config until it is loaded -->
       <div ng-include="'./modules/nav.html'"></div>
 
-      <div class="text-center">
-        <h1 ng-if="config.groupName">{{ config.groupName }} Yahoo! Group Backup</h1>
-        <h1 ng-if="!config.groupName">Yahoo! Group Backup</h1>
+      <div class="text-center row">
+        <h1 class="col-xs-12 hidden-sm hidden-md hidden-lg">{{ config.groupName }}</h1>
+        <h1 class="hidden-xs col-sm-12">{{ config.groupName }} Yahoo! Group Backup</h1>
       </div>
 
       <div ng-include="'./modules/index/index-table.html'"></div>
@@ -96,7 +96,6 @@
   <script type="text/javascript" src="./js/angular-ui-router.min.js"></script>
   <script type="text/javascript" src="./js/angular-sanitize.min.js"></script>
 
-  <script type="text/javascript" src="./js/ui-bootstrap-custom-1.3.3.min.js"></script>
   <script type="text/javascript" src="./js/ui-bootstrap-custom-tpls-1.3.3.min.js"></script>
 
   <!-- modules -->
