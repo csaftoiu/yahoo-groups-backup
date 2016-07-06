@@ -144,9 +144,9 @@ def html_from_message(message, use_yahoo_on_fail=False):
         return result
     except Exception:
         if use_yahoo_on_fail:
-            eprint("Failed to process raw email from Yahoo! message:")
-            traceback.print_exc(file=sys.stderr)
-            eprint("Falling back on Yahoo!'s rendering")
+            # eprint("Failed to process raw email from Yahoo! message:")
+            # traceback.print_exc(file=sys.stderr)
+            # eprint("Falling back on Yahoo!'s rendering")
             return message['messageBody']
 
         # otherwise re-raise it

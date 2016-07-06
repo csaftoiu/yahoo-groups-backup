@@ -11,6 +11,8 @@ Options:
   --redact-before=<message_id>     Redact messages before this message number.
                                    Used to dump smaller sites for testing.
                                    [default: 0]
+  --redactions=<file>              File to use for redactions, if exists.
+                                   [default: redactions.yaml]
 """
 
 import json
@@ -22,9 +24,10 @@ import time
 
 import pymongo
 import schema
+import yaml
 
 from yahoo_groups_backup.logging import eprint
-from yahoo_groups_backup import YahooBackupDB, html_from_message, unescape_yahoo_html
+from yahoo_groups_backup import YahooBackupDB, html_from_message, unescape_yahoo_html, redaction
 
 
 args_schema = schema.Schema({
@@ -85,6 +88,12 @@ angular
         self.group_name = arguments['<group_name>']
         self.page_size = arguments['--msgdb-page-size']
         self.redact_before = arguments['--redact-before']
+
+        self.redactions = []
+        if P.exists(arguments['--redactions']):
+            self.redactions = redaction.load_redactions(open(arguments['--redactions']))
+        elif arguments['--redactions'] != 'redactions.yaml':
+            raise ValueError("Given non-existent redactions file")
 
         self.cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
         self.db = YahooBackupDB(self.cli, self.group_name)
@@ -183,23 +192,27 @@ angular
             ))
             eprint("")
 
+    def apply_redactions(self, text):
+        """Apply the redactions to a given piece of text."""
+        return self.redactions.apply(text)
+
     def render_index(self):
         """Render the index file."""
         eprint("Rendering index data...")
         self.dump_jsonp_records('data.index.js', [
             {
                 "id": message['_id'],
-                "subject": unescape_yahoo_html(message.get('subject', '(unknown)')),
-                "authorName": message.get('authorName', ''),
-                "profile": message.get('profile', ''),
-                "from": mask_email(message.get('from', '')),
+                "subject": self.apply_redactions(unescape_yahoo_html(message.get('subject', '(unknown)'))),
+                "authorName": self.apply_redactions(message.get('authorName', '')),
+                "profile": self.apply_redactions(message.get('profile', '')),
+                "from": self.apply_redactions(mask_email(message.get('from', ''))),
                 "timestamp": message.get('postDate', 0),
             }
             for message in self.db.yield_all_messages(start=self.redact_before)
         ])
 
     def get_message_body(self, message):
-        """Get a message body for a given message."""
+        """Get a message body for a given message, without redactions."""
         if message['_id'] < self.redact_before:
             return self.templates['redacted_message']
 
@@ -218,7 +231,7 @@ angular
             self.dump_jsonp_records('data.messageData-%s-%s.js' % (start, end), [
                 {
                     "id": message['_id'],
-                    "messageBody": self.get_message_body(message),
+                    "messageBody": self.apply_redactions(self.get_message_body(message)),
                 }
                 for message in self.db.yield_all_messages(start=start, end=end)
             ])

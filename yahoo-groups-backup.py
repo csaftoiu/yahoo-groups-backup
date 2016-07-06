@@ -14,6 +14,7 @@ Commands:
                       database
   dump_site           Dump the entire backup as a static website at the given
                       root directory
+  show_redaction      Show what the effects of a redaction would be
 
 Options:
   -h --help                      Show this screen
@@ -25,6 +26,7 @@ Options:
   --mongo-host=<hostname>        Host for mongo database [default: localhost]
   --mongo-port=<port>            Port for mongo database [default: 27017]
 """
+import importlib
 import os
 import sys
 
@@ -79,10 +81,10 @@ def invoke_subcommand(name, cmd_argv, main_args, cfg_args):
     :param main_args The fully merged arguments gotten from the main script
     :param cfg_args The arguments gotten from a config file
     """
-    if not hasattr(subcommands, name):
+    try:
+        module = importlib.import_module('yahoo_groups_backup.subcommands.%s' % (name,))
+    except ImportError:
         sys.exit("Unknown command: %s" % name)
-
-    module = getattr(subcommands, name)
 
     if not module.__doc__:
         sys.exit("Command %s is missing a usage docstring" % name)
