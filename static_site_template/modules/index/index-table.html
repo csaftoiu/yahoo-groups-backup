@@ -62,22 +62,33 @@
               <div class="dropdown-menu dropdown-menu-right" uib-dropdown-menu role="menu">
                 <form class="form-horizontal" role="form">
                   <div class="form-group">
-                    <label for="filter">Filter by</label>
-                    <select class="form-control">
-                      <option value="0" selected>All Snippets</option>
-                      <option value="1">Featured</option>
-                      <option value="2">Most popular</option>
-                      <option value="3">Top rated</option>
-                      <option value="4">Most commented</option>
-                    </select>
+                    <label for="subject">Subject</label>
+                    <input class="form-control" id="subject" type="text" />
                   </div>
                   <div class="form-group">
-                    <label for="contain">Author</label>
-                    <input class="form-control" type="text" />
+                    <label for="author">Author</label>
+                    <input class="form-control" id="author" type="text" />
                   </div>
                   <div class="form-group">
-                    <label for="contain">Contains the words</label>
-                    <input class="form-control" type="text" />
+                    <label>Date Range</label>
+                    <input type="text" class="form-control" uib-datepicker-popup ng-model="startDate"
+                           is-open="search.startDateOpened">
+                    <span class="input-group-btn">
+                      <button type="button" class="btn btn-default" ng-click="search.startDateOpened = true">
+                        <i class="glyphicon glyphicon-calendar"></i>
+                      </button>
+                    </span>
+                    <input type="text" class="form-control" uib-datepicker-popup ng-model="endDate"
+                           is-open="search.endDateOpened">
+                    <span class="input-group-btn">
+                      <button type="button" class="btn btn-default" ng-click="search.endDateOpened = true">
+                        <i class="glyphicon glyphicon-calendar"></i>
+                      </button>
+                    </span>
+                  </div>
+                  <div class="form-group">
+                    <label for="contains">Body contains the words</label>
+                    <input class="form-control" id="contains" type="text" />
                   </div>
                   <button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
                 </form>
