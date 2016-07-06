@@ -1,18 +1,39 @@
 'use strict';
 
-angular.module('staticyahoo.index', ['staticyahoo.message'])
+angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'])
 
   .controller('IndexCtrl', function (
       $scope, $timeout, $filter, $rootScope, $state, $compile,
-      IndexData
+      IndexData, MessageSearch
   ) {
 
-    // Note: IndexData loads & indexes right away
-    // this is fine as it only happens once and doesn't take long
+    var dtTable = null;
 
-    // mark whether table is initialized to prevent ugliness
+    // checking initialization variables
     $scope.tableInitialized = false;
+    $scope.searchFinishedLoading = function () {
+      return MessageSearch.finishedLoading();
+    };
+    $scope.searchProgress = function () {
+      return MessageSearch.getLoadingProgress();
+    };
 
+    // search parameters
+    $scope.search = {
+      text: ''
+    };
+
+    $scope.applySearch = function () {
+      if (!dtTable) {
+        console.log("This shouldn't happen");
+        return;
+      }
+
+      dtTable.order(4);
+      dtTable.draw('full-reset');
+    };
+
+    // helper function
     var messageUrl = function (messageId) {
       return $state.href('message', { id: messageId });
     };
@@ -22,7 +43,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
       $("#tz").html(" (" + (new Date()).format("Z") + ")");
 
       // initialize table
-      var table = $('#messageIndexTable').DataTable({
+      dtTable = $('#messageIndexTable').DataTable({
 
         // set up the display
         dom: "<'row'<'col-sm-3'l><'col-sm-9'p>>" +
@@ -40,7 +61,8 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
             start: request.start,
             length: request.length,
             sortColumn: request.order[0] ? request.columns[request.order[0].column].name : null,
-            sortAscending: request.order[0] ? request.order[0].dir !== "desc" : false
+            sortAscending: request.order[0] ? request.order[0].dir !== "desc" : false,
+            searchText: $scope.search.text
           }).then(function (result) {
             callback({
               draw: request.draw,
@@ -114,6 +136,11 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
 
               return data;
             }
+          },
+          {
+            data: null,
+            name: "searchRelevance",
+            visible: false
           }
         ],
 
@@ -133,7 +160,6 @@ angular.module('staticyahoo.index', ['staticyahoo.message'])
 
     // wait for a page render and start rendering table data
     $timeout(initializeIndexTable, 10);
-
   })
 
 ;

@@ -1,13 +1,11 @@
 'use strict';
 
-
-
 angular.module('staticyahoo.index')
 
   /**
    * Local data source for the index data.
    */
-  .factory('LocalIndexDataSource', function ($filter, $q, $promiseForEach,
+  .factory('LocalIndexDataSource', function ($filter, $q, $promiseForEach, $injector,
                                              LocalJSONP) {
     // initialize the loki database
     var db = new loki();
@@ -103,13 +101,51 @@ angular.module('staticyahoo.index')
         locals.totalLength = data.length;
 
         // apply the sort to the view, if there is one
-        if (request.sortColumn) {
+        if (request.sortColumn && request.sortColumn !== 'searchRelevance') {
           var desc = !request.sortAscending;
           indexView.applySimpleSort(request.sortColumn, desc);
         }
 
         // resolve the data
-        var sortedFilteredData = indexView.data();
+        var sortedData = indexView.data();
+
+        // filter these results if there is search text
+        var sortedFilteredData = null;
+
+        if (request.searchText) {
+          // inject here to avoid circular dependency
+          var MessageSearch__Local = $injector.get('MessageSearch__Local');
+          var sortedSearchResults = MessageSearch__Local.getSearchResults(request.searchText);
+
+          if (request.sortColumn === 'searchRelevance') {
+            // keep in same order, just fill in row data
+            sortedFilteredData = [];
+            angular.forEach(sortedSearchResults, function (res) {
+              sortedFilteredData.push(LocalIndexDataSource.lokiCollection.find({id: +res['ref']})[0]);
+            });
+          } else {
+            // keep in same order as previous data
+
+            // use object as a set
+            var matching = {};
+            angular.forEach(sortedSearchResults, function (res) {
+              matching[res.ref] = 1;
+            });
+
+            // keep only these objects
+            sortedFilteredData = [];
+            for (var i=0; i < sortedData.length; i++) {
+              if (matching[sortedData[i].id]) {
+                sortedFilteredData.push(LocalIndexDataSource.lokiCollection.find({ id: sortedData[i].id })[0]);
+              }
+            }
+          }
+
+        } else {
+          // if no search then do nothing
+          sortedFilteredData = sortedData;
+        }
+
         locals.filteredLength = sortedFilteredData.length;
         locals.rows = sortedFilteredData.slice(request.start, request.start + request.length);
 
@@ -140,7 +176,7 @@ angular.module('staticyahoo.index')
         var indexRow = LocalIndexDataSource.lokiCollection.find({ id: id })[0];
 
         if (!indexRow) {
-          console.log("Message " + id + " not found in index");
+          // console.log("Message " + id + " not found in index");
           return null;
         } else {
           return indexRow;
@@ -148,7 +184,17 @@ angular.module('staticyahoo.index')
       });
     };
 
+    /**
+     * Return a promise getting the last message number
+     */
+    var getLastMessageNumber = function () {
+        return LocalIndexDataSource.getData().then(function () {
+          return LocalIndexDataSource.lokiCollection.chain().simplesort('-id').limit(1).data()[0].id;
+        });
+    };
+
     return {
+      getLastMessageNumber: getLastMessageNumber,
       getSortedFilteredRows: getSortedFilteredRows,
       getRow: getRow
     };

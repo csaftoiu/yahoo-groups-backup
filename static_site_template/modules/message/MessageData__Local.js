@@ -69,7 +69,7 @@ angular.module('staticyahoo.message')
 
       return getFileData(idToFilename(id)).then(function (msgData) {
         if (!msgData.idToData[id]) {
-          console.log("Message with id " + id + " not found in message data");
+          // console.log("Message with id " + id + " not found in message data");
           return null;
         }
 
