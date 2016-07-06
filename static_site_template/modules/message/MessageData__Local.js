@@ -25,21 +25,38 @@ angular.module('staticyahoo.message')
       };
     };
 
-    var getFileData = function (fn) {
-      var cache = getFileData.cache = getFileData.cache || {};
+    var getFileData = function (fileName) {
+      var cache = getFileData.cache = getFileData.cache || {__size: 0};
 
       // if cache already has this file, return the same promise
-      if (cache.filename === fn) {
-        return cache.promise;
+      if (cache[fileName]) {
+        cache[fileName].lastAccess = Date.now();
+        return cache[fileName].promise;
       }
 
       // otherwise, new promise and new file
-      cache.filename = fn;
-      cache.promise = LocalJSONP(fn).then(function (data) {
+      cache[fileName] = {};
+      cache.__size++;
+      cache[fileName].lastAccess = Date.now();
+      cache[fileName].promise = LocalJSONP(fileName).then(function (data) {
         return procFileData(data);
       });
 
-      return cache.promise;
+      // evict latest entry
+      if (cache.__size > 10) {
+        var earliest = null;
+        angular.forEach(cache, function (value, key) {
+          if (key === '__size') { return; }
+          if (!earliest || cache[key].lastAccess < cache[earliest].lastAccess) {
+            earliest = key;
+          }
+        });
+        console.log("Evicting '" + earliest + "' from cache");
+        delete cache[earliest];
+        cache.__size--;
+      }
+
+      return cache[fileName].promise;
     };
 
     /**
