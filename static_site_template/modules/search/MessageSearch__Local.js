@@ -13,7 +13,6 @@ angular.module('staticyahoo.search')
     var index = elasticlunr(function () {
       this.addField("subject");
       this.addField("shortDisplayAuthor");
-      this.addField("displayDate");
       this.addField("messageBody");
       this.setRef('id');
       this.saveDocument(false);
@@ -89,6 +88,11 @@ angular.module('staticyahoo.search')
      */
     var getSearchResults = function (searchText) {
       return index.search(searchText, {
+        fields: {
+          shortDisplayAuthor: {boost: 5},
+          messageBody: {boost: 3},
+          subject: {boost: 1}
+        },
         expand: true
       });
     };
