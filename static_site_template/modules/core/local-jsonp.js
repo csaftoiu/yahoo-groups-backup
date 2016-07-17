@@ -123,40 +123,31 @@ angular.module('staticyahoo.core')
      *
      * @param prefix The prefix path
      * @param progress= Callback, called with (stepsDone, totalSteps) whenever
-     * another step is processed. A step is:
+     * another step is processed. For each chunk, a step is:
      *    1. Loading compressed data from the filesystem
      *    2. Decompressing it
-     *    3. Parsing the JSON
-     * So there are `3 * chunks` steps
+     *
+     * And finally, parsing the JSON at the end is another step.
+     * So there are `2 * chunks + 1` steps
      * @return A promise firing with the object.
      */
     function loadCompressed(prefix, progress) {
       progress = progress || function () {};
 
       var totalChunks = null;
-      var curStep = 0;
-      var totalSteps = 0;
 
-      var obj = null;
-      var oboeStream = oboe(); // run a manual stream
-      oboeStream.done(function (obj_) {
-        obj = obj_;
-      });
+      var chunks = [];
 
       var processPart = function(i) {
         return LocalJSONP(prefix + '-part' + i + '.lz-b64.js').then(function (chunkInfo) {
           totalChunks = chunkInfo.totalChunks;
 
-          progress(i*3, totalChunks*3);
+          progress(i*2, totalChunks*2 + 1);
 
           var chunk = LZString.decompressFromBase64(chunkInfo.chunkData);
+          chunks[i] = chunk;
 
-          progress(i*3 + 1, totalChunks*3);
-
-          console.log(chunk.length / 1024, "kB");
-          oboeStream.emit('data', chunk);
-
-          progress(i*3 + 2, totalChunks*3);
+          progress(i*2 + 1, totalChunks*2 + 1);
         });
       };
 
@@ -168,12 +159,13 @@ angular.module('staticyahoo.core')
         }
         return $promiseForEach(partIs, processPart);
       }).then(function () {
+        var obj = JSON.parse(chunks.join(""));
         if (!obj) {
           throw new Error("object should have been parsed");
         }
 
         // mark final progress done
-        progress(totalChunks*3, totalChunks*3);
+        progress(totalChunks*2 + 1, totalChunks*2 + 1);
 
         return obj;
       });
