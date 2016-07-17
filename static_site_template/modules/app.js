@@ -2,6 +2,7 @@
 
 angular
   .module('staticyahoo.app', [
+    'LocalStorageModule',
     'ui.bootstrap',
     'staticyahoo.core',
     'staticyahoo.nav',

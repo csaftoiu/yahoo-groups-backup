@@ -1,6 +1,6 @@
 """
 Usage:
-  yahoo-groups-backup.py dump_site [-h|--help] [options] <group_name> <root_dir>
+  yahoo-groups-backup.py dump_site [-h] [options] <group_name> <root_dir>
 
 Options:
   --msgdb-page-size=<page_size>    Number of messages to store in each local
@@ -13,6 +13,8 @@ Options:
                                    [default: 0]
   --redactions=<file>              File to use for redactions, if exists.
                                    [default: redactions.yaml]
+  --code-only                      Whether to dump only the code and not
+                                   the messages.
 """
 
 import json
@@ -63,6 +65,23 @@ def sanitize_filename(fn):
     return ''.join(c if (c.isalnum() or c in ' ._-') else '_' for c in fn)
 
 
+def copytree(src, dst, symlinks=False, ignore=None):
+    """Work-around shutil.copytree choking if the destination directory
+    exists.
+
+    from http://stackoverflow.com/a/13814557/15055 ."""
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            copytree(s, d, symlinks, ignore)
+        else:
+            if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+                shutil.copy2(s, d)
+
+
 class DumpSite:
     """Class to dump a static site.
 
@@ -85,6 +104,8 @@ angular
     }
 
     def __init__(self, arguments):
+        self.code_only = arguments['--code-only']
+
         self.group_name = arguments['<group_name>']
         self.page_size = arguments['--msgdb-page-size']
         self.redact_before = arguments['--redact-before']
@@ -116,7 +137,7 @@ angular
 
             return []
 
-        shutil.copytree(self.source_root_dir, self.dest_root_dir, ignore=ignore_copy)
+        copytree(self.source_root_dir, self.dest_root_dir, ignore=ignore_copy)
 
     def render_templates(self):
         """Render the modules/**/*.html into the template Cache."""
@@ -254,6 +275,13 @@ angular
 
     def run(self):
         """Run and dump the entire site."""
+        if self.code_only:
+            eprint("Dumping code only...")
+            self.copy_template_site()
+            self.render_templates()
+            self.render_config()
+            return
+
         if os.path.exists(self.dest_root_dir):
             sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 

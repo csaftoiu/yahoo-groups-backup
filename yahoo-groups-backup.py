@@ -34,7 +34,6 @@ from docopt import docopt
 import schema
 import yaml
 
-from yahoo_groups_backup import subcommands
 from yahoo_groups_backup.logging import eprint
 
 
