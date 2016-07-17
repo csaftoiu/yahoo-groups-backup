@@ -32,9 +32,25 @@ angular.module('staticyahoo.search')
      */
     function storeIndex() {
       console.log("Storing with cache buster", $rootScope.config.cacheBuster);
-      localStorageService.set("indexCacheBuster", $rootScope.config.cacheBuster);
-      localStorageService.set("searchIndexObj", index.toJSON());
+
+      // set at 0 in case something goes wrong ...
+      localStorageService.set("indexCacheBuster", 0);
+
       localStorageService.set("lastProcessedMessage", lastProcessedMessage);
+      localStorageService.set("indexCacheBuster", $rootScope.config.cacheBuster);
+
+      console.log("getting index JSON...");
+      var searchIndexObj = index.toJSON();
+
+      console.log("Stringifying...");
+      var data = JSON.stringify(searchIndexObj);
+      console.log("Uncompressed size is", data.length / 1024, "kB, compressing...");
+      var compData = LZString.compress(data);
+      console.log("Compressed size is", compData.length / 1024, "kB, storing...");
+
+      localStorageService.set("searchIndexJSON.LZString", compData);
+
+      console.log("Done!");
     }
 
     /**
@@ -46,15 +62,22 @@ angular.module('staticyahoo.search')
       var curCacheBuster = $rootScope.config.cacheBuster;
       console.log("curCacheBuster is", curCacheBuster);
       var storedCacheBuster = localStorageService.get("indexCacheBuster");
-      var stored = null;
+      var storedSearchIndexObj = null;
       if (storedCacheBuster === curCacheBuster) {
         // load index
         console.log("Loading index from cache!");
-        stored = localStorageService.get("searchIndexObj");
+        try {
+          var compData = localStorageService.get("searchIndexJSON.LZString");
+          var data = LZString.decompress(compData);
+          storedSearchIndexObj = JSON.parse(data);
+        } catch (e) {
+          console.error("Couldn't load index from cache, starting from scratch");
+          storedSearchIndexObj = null;
+        }
       }
 
-      if (stored) {
-        index = elasticlunr.Index.load(stored);
+      if (storedSearchIndexObj) {
+        index = elasticlunr.Index.load(storedSearchIndexObj);
         lastProcessedMessage = localStorageService.get("lastProcessedMessage");
       } else {
         index = elasticlunr(function () {
