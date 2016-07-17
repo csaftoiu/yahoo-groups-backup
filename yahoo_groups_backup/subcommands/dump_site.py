@@ -14,7 +14,10 @@ Options:
   --redactions=<file>              File to use for redactions, if exists.
                                    [default: redactions.yaml]
   --code-only                      Whether to dump only the code and not
-                                   the messages.
+                                   the messages. If enabled, this only
+                                   *copies* the template site *over* the
+                                   destination, without removing any of
+                                   the files.
 """
 
 import json
@@ -201,6 +204,7 @@ angular
         self.dump_jsonp('data.config.js', {
             'groupName': self.group_name,
             'lastMessageTime': self.db.get_latest_message().get('postDate'),
+            'lastMessageNumber': self.db.get_latest_message()['_id'],
             'messageDbPageSize': self.page_size,
             'cacheBuster': int(time.time()),
         })

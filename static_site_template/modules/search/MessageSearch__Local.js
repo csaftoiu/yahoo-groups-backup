@@ -44,13 +44,28 @@ angular.module('staticyahoo.search')
 
       console.log("Stringifying...");
       var data = JSON.stringify(searchIndexObj);
-      console.log("Uncompressed size is", data.length / 1024, "kB, compressing...");
+      console.log("Uncompressed size is", data.length / 1024, "kB, compressing bit by bit at a time...");
+
+      var CHUNK_SIZE = 10*1024*1024;
+      var pieceI = 0;
+      for (var start=0; start < data.length; start += CHUNK_SIZE) {
+        var piece = LZString.compress(data.slice(start, start + CHUNK_SIZE));
+        console.log(
+          "Compressed piece #", pieceI,
+          "from", start / 1024, "kB to", (start + CHUNK_SIZE)/1024,
+          "kB into", piece.length / 1024, "kB, storing now...");
+        localStorageService.set("searchIndexJSON.LZString." + pieceI, piece);
+        console.log("Stored piece #", pieceI);
+        pieceI++;
+      }
+      console.log("all done!");
+/*
       var compData = LZString.compress(data);
       console.log("Compressed size is", compData.length / 1024, "kB, storing...");
 
       localStorageService.set("searchIndexJSON.LZString", compData);
 
-      console.log("Done!");
+      console.log("Done!");*/
     }
 
     /**
@@ -61,19 +76,35 @@ angular.module('staticyahoo.search')
 
       var curCacheBuster = $rootScope.config.cacheBuster;
       console.log("curCacheBuster is", curCacheBuster);
-      var storedCacheBuster = localStorageService.get("indexCacheBuster");
+      var storedCacheBuster = curCacheBuster; // localStorageService.get("indexCacheBuster");
       var storedSearchIndexObj = null;
       if (storedCacheBuster === curCacheBuster) {
         // load index
         console.log("Loading index from cache!");
         try {
-          var compData = localStorageService.get("searchIndexJSON.LZString");
-          var data = LZString.decompress(compData);
+          var data = "";
+          var pieceI = 0;
+          console.log(localStorageService.keys());
+          while (true) {
+            var piece = localStorageService.get("searchIndexJSON.LZString." + pieceI);
+            if (piece === undefined || piece === null) {
+              console.log("Didn't get piece for #", pieceI);
+              break;
+            }
+            console.log("Decompressing piece #", pieceI, "of", piece.length / 1024, "kB")
+            data += LZString.decompress(piece);
+            pieceI++;
+          }
+
+          console.log("Parsing the JSON of", data.length / 1024, "kB");
           storedSearchIndexObj = JSON.parse(data);
         } catch (e) {
+          console.error(e);
           console.error("Couldn't load index from cache, starting from scratch");
           storedSearchIndexObj = null;
         }
+      } else {
+        console.log("stored buster was", storedCacheBuster, "but we need", curCacheBuster);
       }
 
       if (storedSearchIndexObj) {
