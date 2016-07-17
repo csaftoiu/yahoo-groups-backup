@@ -13,7 +13,7 @@ angular.module('staticyahoo.core')
    * On error, the promise just never fires. Oops. Don't get files that
    * don't exist!
    */
-  .factory('LocalJSONP', function ($q) {
+  .factory('LocalJSONP', function ($q, $promiseForEach) {
 
     var cacheBuster = null;
 
@@ -24,7 +24,21 @@ angular.module('staticyahoo.core')
       script: null
     };
 
-    var dataLoaded = function (data) {
+    LocalJSONP.setCacheBuster = function (b) {
+      cacheBuster = b;
+    };
+    LocalJSONP.loadCompressed = loadCompressed;
+    // add ref so can hook into global dataLoaded
+    LocalJSONP._dataLoaded = dataLoaded;
+
+    return LocalJSONP;
+
+    // ---------------------------------------------
+
+    /**
+     * Internal callback for when data is loaded.
+     */
+    function dataLoaded(data) {
       if (!state.script) {
         console.error("Data loaded without a script tag!");
       }
@@ -40,14 +54,14 @@ angular.module('staticyahoo.core')
         state.hook(data);
         state.hook = null;
       }
-    };
+    }
 
     /**
      * Load a (potentially) local JS file using the <script> tag trick.
      * The local file should be JavaScript code which calls dataLoaded() with the data.
      * `callback` will be called on success. The entire app will break on failure.
      */
-    var loadLocalJS = function (path, callback) {
+    function loadLocalJS(path, callback) {
       state.hook = callback;
 
       var script = document.createElement('script');
@@ -62,9 +76,12 @@ angular.module('staticyahoo.core')
       script.src = src;
 
       document.getElementsByTagName('head')[0].appendChild(script);
-    };
+    }
 
-    var LocalJSONP = function (path) {
+    /**
+     * Load the contents of the LocalJSONP file found at path.
+     */
+    function LocalJSONP(path) {
       if (state.promise) {
         console.log("JSONP: WAITING '" + path + "'");
 
@@ -91,16 +108,76 @@ angular.module('staticyahoo.core')
       });
 
       return promise;
-    };
+    }
 
-    // add helpers so can hook into global window
-    LocalJSONP._dataLoaded = dataLoaded;
-    // add ability to set cache buster
-    LocalJSONP.setCacheBuster = function (b) {
-      cacheBuster = b;
-    };
+    /**
+     * Load the compressed object starting at the given prefix.
+     * For example, given prefix some/dir/object, it will load
+     *
+     *     some/dir/object-part0.lz-b64.js
+     *
+     * It will then use this to load as many parts as necessary.
+     *
+     * All parts are uncompressed, stuck together, and
+     * JSON.parse()d, then the object is returned.
+     *
+     * @param prefix The prefix path
+     * @param progress= Callback, called with (stepsDone, totalSteps) whenever
+     * another step is processed. A step is:
+     *    1. Loading compressed data from the filesystem
+     *    2. Decompressing it
+     *    3. Parsing the JSON
+     * So there are `3 * chunks` steps
+     * @return A promise firing with the object.
+     */
+    function loadCompressed(prefix, progress) {
+      progress = progress || function () {};
 
-    return LocalJSONP;
+      var totalChunks = null;
+      var curStep = 0;
+      var totalSteps = 0;
+
+      var obj = null;
+      var oboeStream = oboe(); // run a manual stream
+      oboeStream.done(function (obj_) {
+        obj = obj_;
+      });
+
+      var processPart = function(i) {
+        return LocalJSONP(prefix + '-part' + i + '.lz-b64.js').then(function (chunkInfo) {
+          totalChunks = chunkInfo.totalChunks;
+
+          progress(i*3, totalChunks*3);
+
+          var chunk = LZString.decompressFromBase64(chunkInfo.chunkData);
+
+          progress(i*3 + 1, totalChunks*3);
+
+          console.log(chunk.length / 1024, "kB");
+          oboeStream.emit('data', chunk);
+
+          progress(i*3 + 2, totalChunks*3);
+        });
+      };
+
+      // load first part to get total chunks, then load the remaining parts
+      return processPart(0).then(function () {
+        var partIs = [];
+        for (var i=1; i < totalChunks; i++) {
+          partIs.push(i);
+        }
+        return $promiseForEach(partIs, processPart);
+      }).then(function () {
+        if (!obj) {
+          throw new Error("object should have been parsed");
+        }
+
+        // mark final progress done
+        progress(totalChunks*3, totalChunks*3);
+
+        return obj;
+      });
+    }
 
   })
 

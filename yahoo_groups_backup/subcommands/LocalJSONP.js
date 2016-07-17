@@ -70,8 +70,9 @@ var LocalJSONP = function (path) {
 };
 
 /**
- * Store a string at the given dest prefix, using the given chunk size.
- * e.g. if given a 4000-byte string, and chunkSize of 1000, and destPrefix
+ * Store an object at the given dest prefix, using the given chunk size.
+ * The object is stringified with JSON. Example, if given an object that
+ * results in a 4000-byte string, given chunkSize of 1000 and destPrefix
  * of some/dir/object , it would be stored in:
  *
  *     some/dir/object-part0.lz-b64.js
@@ -83,7 +84,10 @@ var LocalJSONP = function (path) {
  *
  * Returns a promise when all chunks have been stored.
  */
-var storeCompressed = function (strData, chunkSize, destPrefix) {
+var storeCompressed = function (jsonObj, chunkSize, destPrefix) {
+  console.log("Stringifying...");
+  var strData = JSON.stringify(jsonObj);
+
   console.log("Compressing", strData.length / 1024, "kB in", chunkSize / 1024, "kB chunks");
 
   var chunks = [];
@@ -108,7 +112,7 @@ var storeCompressed = function (strData, chunkSize, destPrefix) {
     }));
 
     storePs.push(new Promise(function (resolve, reject) {
-      fs.writeFile(destPrefix + '-part' + i + '.lz.js', data, function (err) {
+      fs.writeFile(destPrefix + '-part' + i + '.lz-b64.js', data, function (err) {
         if (err) {
           reject(err);
         } else {

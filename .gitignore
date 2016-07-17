@@ -3,6 +3,7 @@ redactions.yaml
 .virtualenv
 .idea
 fixencoding.py
+node_modules/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

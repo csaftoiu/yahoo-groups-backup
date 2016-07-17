@@ -14,7 +14,7 @@ var LocalJSONP = require('./LocalJSONP.js');
 // ---------------------------
 
 // how many bytes to split the stringified JSON file into
-var CHUNK_SIZE = 10*1024*1024;
+var CHUNK_SIZE = 2*1024*1024;
 
 // ---------------------------
 
@@ -54,13 +54,9 @@ function main() {
   }).then(function () {
     return processBatches(config, pathToData, messageIndex, searchIndex, 0);
   }).then(function () {
-
-    console.log("toJSON...");
-    var jsonObj = searchIndex.toJSON();
-    console.log("Stringifying...");
-    var strData = JSON.stringify(jsonObj);
-
-    return LocalJSONP.storeCompressed(strData, CHUNK_SIZE, path.join(pathToData, 'data.searchIndex'));
+    return LocalJSONP.storeCompressed(
+      searchIndex.toJSON(), CHUNK_SIZE,
+      path.join(pathToData, 'data.searchIndex'));
   }).then(function () {
     console.log("Done!");
   }).catch(function (err) {
@@ -102,6 +98,9 @@ function processBatches(config, pathToData, messageIndex, searchIndex, startI) {
       var toAdd = {};
       extend(toAdd, data[i]);
       extend(toAdd, messageIndex.idToRow[data[i].id]);
+
+      // augment with shortDisplayAuthor, which is dynamically added to the messages
+      toAdd.shortDisplayAuthor = [toAdd.profile, toAdd.authorName, toAdd.from].join(" ");
 
       // remove HTML from message body to not confuse the search
       toAdd.messageBody = toAdd.messageBody.replace(/<[^>]+>/g, " ");
