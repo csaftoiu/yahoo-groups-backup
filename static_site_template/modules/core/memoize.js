@@ -10,7 +10,7 @@ angular.module('staticyahoo.core')
        * up to the given number of results. Argument values are converted
        * to keys using .toString().
        * @param f The function to memoize
-       * @param n Number of entries to keep
+       * @param n Number of entries to keep. Defaults to keeping everything.
        * @returns {*} Memoized version of the function
        */
       function memoize(f, n) {

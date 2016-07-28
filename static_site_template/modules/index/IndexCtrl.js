@@ -39,12 +39,56 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
       dtTable.draw('full-reset');
     };
 
-    // helper function
-    var messageUrl = function (messageId) {
-      return $state.href('message', { id: messageId });
+    // pagination
+    $scope.pagination = {
+      sliderPageNumber: 1,
+      pageHeaders: [],
+      formatter: function (pageNumber) {
+        console.log(pageNumber);
+        var rawValue = $scope.pagination.pageHeaders[pageNumber];
+
+        if (rawValue === undefined) {
+          return pageNumber;
+        }
+
+        var sortColumnName = dtTable.settings().init().columns[dtTable.order()[0][0]].name;
+
+        if (sortColumnName === 'timestamp') {
+          return $filter('date')(rawValue * 1000, $rootScope.dateFormat);
+        }
+
+        return rawValue;
+      },
+      numPages: function () {
+        if (!dtTable) {
+          return 10;
+        }
+
+        return dtTable.page.info().pages;
+      },
+      setPageNumber: function (pageNumber) {
+        dtTable.page(pageNumber).draw('page');
+      }
     };
 
-    var initializeIndexTable = function () {
+    // wait for a page render and start rendering table data
+    $timeout(initializeIndexTable, 10);
+
+    // -----------------------------------
+
+    /**
+     * Get the URL to visit a message, given its id
+     * @param messageId
+     * @returns {*}
+    */
+    function messageUrl(messageId) {
+      return $state.href('message', { id: messageId });
+    }
+
+    /**
+     * Initialize the datatable
+     */
+    function initializeIndexTable() {
       // show timezone in header
       $("#tz").html(" (" + (new Date()).format("Z") + ")");
 
@@ -76,11 +120,14 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
               recordsFiltered: result.filteredLength,
               data: result.data
             });
+            $scope.pagination.pageHeaders = result.pageHeaders;
+            $scope.$broadcast('slider:relayout');  // update tooltip
+            $scope.pagination.sliderPageNumber = dtTable.page();
           });
         },
 
-        // initially sort by descending message id
-        order: [[3, "desc"]],
+        // initially sort by descending date
+        order: [[2, "desc"]],
 
         // column defs:
         // - data source
@@ -159,13 +206,11 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
         initComplete: function (settings, json) {
           console.log("Index table initialized!");
           $scope.tableInitialized = true;
+          $scope.$broadcast('slider:relayout');  // update tooltip
         }
       });
 
-    };
-
-    // wait for a page render and start rendering table data
-    $timeout(initializeIndexTable, 10);
+    }
   })
 
 ;

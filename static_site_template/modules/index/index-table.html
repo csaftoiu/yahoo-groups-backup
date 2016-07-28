@@ -39,6 +39,22 @@
         </div>
       </div>
     </div>
+  	<div class="row">
+	  	<div class="col-xs-12
+	  	            col-sm-10 col-sm-offset-1
+	  	            col-md-8  col-md-offset-2
+	  	            col-lg-6  col-lg-offset-3">
+        <slider ng-model="pagination.sliderPageNumber"
+                min="0"
+                max="pagination.numPages() - 1"
+                step="1"
+                formatter="pagination.formatter(value)"
+                on-stop-slide="pagination.setPageNumber(value)"
+        >
+        </slider>
+      </div>
+    </div>
+
     </form>
     <br>
     <table id="messageIndexTable" class="table table-hover table-bordered"

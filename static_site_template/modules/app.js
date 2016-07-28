@@ -4,6 +4,7 @@ angular
   .module('staticyahoo.app', [
     'LocalStorageModule',
     'ui.bootstrap',
+    'ui.bootstrap-slider',
     'staticyahoo.core',
     'staticyahoo.nav',
     'staticyahoo.index',

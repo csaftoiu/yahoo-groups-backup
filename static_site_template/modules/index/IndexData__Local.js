@@ -89,7 +89,8 @@ angular.module('staticyahoo.index')
      * @returns A promise returning an object with: {
      *     totalLength: The total length of everything that matched
      *     filteredLength: The length of just what was returned
-     *     data: The data
+     *     data: The data,
+     *     pageHeaders: a zero-indexed array of the first values of the sort column from each page
      * }
      */
 
@@ -149,6 +150,14 @@ angular.module('staticyahoo.index')
         locals.filteredLength = sortedFilteredData.length;
         locals.rows = sortedFilteredData.slice(request.start, request.start + request.length);
 
+        // calculate the page headers
+        locals.pageHeaders = [];
+        if (request.sortColumn && request.sortColumn !== 'searchRelevance') {
+          for (var i=0; i < sortedFilteredData.length; i += request.length) {
+            locals.pageHeaders.push(sortedFilteredData[i][request.sortColumn]);
+          }
+        }
+
         // get message snippets
         return getMessageSnippets(locals.rows.map(function (row) { return row.id; }));
       }).then(function (snippets) {
@@ -160,7 +169,8 @@ angular.module('staticyahoo.index')
         return {
           totalLength: locals.totalLength,
           filteredLength: locals.filteredLength,
-          data: locals.rows
+          data: locals.rows,
+          pageHeaders: locals.pageHeaders
         }
       });
     };
