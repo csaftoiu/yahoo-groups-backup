@@ -9,7 +9,7 @@ angular.module('staticyahoo.search')
    */
   .factory('MessageSearch__Local', function (
         $rootScope, $promiseForEach, $q, $timeout,
-        LocalJSONP, IndexData, MessageData) {
+        LocalJSONP, IndexData, MessageData, memoize) {
 
     var index = null;
 
@@ -28,7 +28,7 @@ angular.module('staticyahoo.search')
       startLoading: startLoading,
       finishedLoading: finishedLoading,
       getLoadingProgress: getLoadingProgress,
-      getSearchResults: getSearchResults
+      getSearchResults: memoize(getSearchResults, 10)
     };
 
     // ------------------------------------------------

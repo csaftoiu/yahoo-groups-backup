@@ -2,7 +2,7 @@
 
 angular.module('staticyahoo.message')
 
-  .factory('LocalMessageDataSource', function ($rootScope, LocalJSONP) {
+  .factory('LocalMessageDataSource', function ($rootScope, LocalJSONP, memoize) {
     var idToFilename = function (i) {
       var page = $rootScope.config.messageDbPageSize;
 
@@ -25,39 +25,11 @@ angular.module('staticyahoo.message')
       };
     };
 
-    var getFileData = function (fileName) {
-      var cache = getFileData.cache = getFileData.cache || {__size: 0};
-
-      // if cache already has this file, return the same promise
-      if (cache[fileName]) {
-        cache[fileName].lastAccess = Date.now();
-        return cache[fileName].promise;
-      }
-
-      // otherwise, new promise and new file
-      cache[fileName] = {};
-      cache.__size++;
-      cache[fileName].lastAccess = Date.now();
-      cache[fileName].promise = LocalJSONP(fileName).then(function (data) {
+    var getFileData = memoize(function (fileName) {
+      return LocalJSONP(fileName).then(function (data) {
         return procFileData(data);
       });
-
-      // evict latest entry
-      if (cache.__size > 10) {
-        var earliest = null;
-        angular.forEach(cache, function (value, key) {
-          if (key === '__size') { return; }
-          if (!earliest || cache[key].lastAccess < cache[earliest].lastAccess) {
-            earliest = key;
-          }
-        });
-        console.log("Evicting '" + earliest + "' from cache");
-        delete cache[earliest];
-        cache.__size--;
-      }
-
-      return cache[fileName].promise;
-    };
+    }, 10);
 
     /**
      * Get just the message body.
