@@ -206,7 +206,11 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
         initComplete: function (settings, json) {
           console.log("Index table initialized!");
           $scope.tableInitialized = true;
-          $scope.$broadcast('slider:relayout');  // update tooltip
+
+          // update tooltip after layout
+          $timeout(function () {
+            $scope.$broadcast('slider:relayout');
+          }, 0);
         }
       });
 
