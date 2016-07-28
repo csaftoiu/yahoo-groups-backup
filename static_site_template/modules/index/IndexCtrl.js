@@ -3,7 +3,7 @@
 angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'])
 
   .controller('IndexCtrl', function (
-      $scope, $timeout, $filter, $rootScope, $state, $compile,
+      $scope, $timeout, $filter, $rootScope, $state,
       IndexData, MessageSearch
   ) {
 
@@ -47,7 +47,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
         var rawValue = $scope.pagination.pageHeaders[pageNumber];
 
         if (rawValue === undefined) {
-          return pageNumber;
+          return "";
         }
 
         var sortColumnName = dtTable.settings().init().columns[dtTable.order()[0][0]].name;
@@ -107,6 +107,12 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
         var T = $scope.pagination.ticks;
 
         var numPages = dtTable.page.info().pages;
+        if (!numPages) {
+          T.indices = [];
+          T.labels = [];
+          return;
+        }
+
         var numTicks = Math.min(5, numPages);
 
         var gap = (numPages - 1) / (numTicks - 1);

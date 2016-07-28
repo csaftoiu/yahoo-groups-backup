@@ -13,7 +13,15 @@
 	  	<div class="col-xs-10 col-xs-offset-1
 	  	            col-sm-10 col-sm-offset-1
 	  	            col-md-8  col-md-offset-2
-	  	            col-lg-6  col-lg-offset-3">
+	  	            col-lg-6  col-lg-offset-3"
+           style="position: relative;">
+        <span ng-show="searchEnabled && searchFinishedLoading()"
+              class="glyphicon glyphicon-info-sign" aria-hidden="true"
+              style="position: absolute; top: 11px; left: -10px"
+              uib-tooltip-template="'./modules/index/search-tooltip.html'"
+              tooltip-placement="bottom" tooltip-class="search-tooltip">
+        </span>
+
         <div ng-if="!searchEnabled" class="text-center">
           <button ng-click="enableSearch()" class="btn btn-primary">
             Click to Load Search
@@ -39,6 +47,9 @@
         </div>
       </div>
     </div>
+    <div class="row">
+      <div class="col-xs-12" style="height:5px;"></div>
+    </div>
   	<div class="row">
 	  	<div class="col-xs-10 col-xs-offset-1
 	  	            col-sm-10 col-sm-offset-1
@@ -52,6 +63,7 @@
                 ticks-labels="pagination.ticks.labels"
                 ticks-snap-bounds="pagination.ticks.snapBounds"
                 formatter="pagination.formatTooltip(value)"
+                slider-tooltip-position="bottom"
                 on-stop-slide="pagination.setPageNumber(value)"
         >
         </slider>
