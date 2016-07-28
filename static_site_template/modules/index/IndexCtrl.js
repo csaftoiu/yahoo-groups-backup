@@ -44,7 +44,6 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
       sliderPageNumber: 1,
       pageHeaders: [],
       formatter: function (pageNumber) {
-        console.log(pageNumber);
         var rawValue = $scope.pagination.pageHeaders[pageNumber];
 
         if (rawValue === undefined) {

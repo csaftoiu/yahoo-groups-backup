@@ -104,7 +104,15 @@ angular.module('staticyahoo.index')
         // apply the sort to the view, if there is one
         if (request.sortColumn && request.sortColumn !== 'searchRelevance') {
           var desc = !request.sortAscending;
-          indexView.applySimpleSort(request.sortColumn, desc);
+          // indexView.applySimpleSort(request.sortColumn, desc);
+          var col = request.sortColumn;
+          indexView.applySort(function (objA, objB) {
+            var a = objA[col], b = objB[col];
+            if (typeof a === "string") a = a.toUpperCase();
+            if (typeof b === "string") b = b.toUpperCase();
+            if (a < b) return desc ? 1 : -1;
+            if (a > b) return desc ? -1 : 1;
+          });
         }
 
         // resolve the data
