@@ -48,7 +48,10 @@
                 min="0"
                 max="pagination.numPages() - 1"
                 step="1"
-                formatter="pagination.formatter(value)"
+                ticks="pagination.ticks.indices"
+                ticks-labels="pagination.ticks.labels"
+                ticks-snap-bounds="pagination.ticks.snapBounds"
+                formatter="pagination.formatTooltip(value)"
                 on-stop-slide="pagination.setPageNumber(value)"
         >
         </slider>

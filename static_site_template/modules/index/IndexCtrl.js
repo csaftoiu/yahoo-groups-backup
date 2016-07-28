@@ -43,7 +43,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
     $scope.pagination = {
       sliderPageNumber: 1,
       pageHeaders: [],
-      formatter: function (pageNumber) {
+      formatTooltip: function (pageNumber) {
         var rawValue = $scope.pagination.pageHeaders[pageNumber];
 
         if (rawValue === undefined) {
@@ -58,6 +58,36 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
 
         return rawValue;
       },
+      formatTickLabel: function (pageNumber) {
+        var rawValue = $scope.pagination.pageHeaders[pageNumber];
+
+        if (rawValue === undefined) {
+          return pageNumber;
+        }
+
+        var sortColumnName = dtTable.settings().init().columns[dtTable.order()[0][0]].name;
+
+        if (sortColumnName === 'timestamp') {
+          return $filter('date')(rawValue * 1000, 'MMM y');
+        }
+
+        if (sortColumnName === 'shortDisplayAuthor') {
+          // remove after parenthesis
+          if (rawValue.indexOf("(") !== -1) {
+            rawValue = rawValue.substring(0, rawValue.indexOf("(") - 1);
+          }
+        }
+
+        // snap to string
+        rawValue = '' + rawValue;
+
+        // don't let it get too long
+        if (rawValue.length >= 12) {
+          rawValue = rawValue.substring(0, 10) + "...";
+        }
+
+        return rawValue;
+      },
       numPages: function () {
         if (!dtTable) {
           return 10;
@@ -67,6 +97,35 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
       },
       setPageNumber: function (pageNumber) {
         dtTable.page(pageNumber).draw('page');
+      },
+      ticks: {
+        indices: [],
+        labels: [],
+        snapBounds: 5
+      },
+      updateTicks: function () {
+        var T = $scope.pagination.ticks;
+
+        var numPages = dtTable.page.info().pages;
+        var numTicks = Math.min(5, numPages);
+
+        var gap = (numPages - 1) / (numTicks - 1);
+
+        T.indices = [0];
+        for (var i=1; i < (numTicks - 1); i++) {
+          T.indices.push(Math.round(gap*i));
+        }
+        T.indices.push(numPages - 1);
+
+        T.labels = [];
+        T.indices.forEach(function (pageNumber) {
+          T.labels.push($scope.pagination.formatTickLabel(pageNumber));
+        });
+
+        T.snapBounds = Math.min(Math.floor(numPages * 0.02), 20);
+        if (numTicks >= numPages - 1) {
+          T.snapBounds = 0;
+        }
       }
     };
 
@@ -120,8 +179,9 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
               data: result.data
             });
             $scope.pagination.pageHeaders = result.pageHeaders;
-            $scope.$broadcast('slider:relayout');  // update tooltip
             $scope.pagination.sliderPageNumber = dtTable.page();
+            $scope.pagination.updateTicks();
+            $scope.$broadcast('slider:relayout');  // update tooltip
           });
         },
 
@@ -208,6 +268,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
 
           // update tooltip after layout
           $timeout(function () {
+            $scope.pagination.updateTicks();
             $scope.$broadcast('slider:relayout');
           }, 0);
         }
