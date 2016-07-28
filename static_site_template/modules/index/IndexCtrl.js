@@ -10,12 +10,18 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
     var dtTable = null;
 
     // checking initialization variables
+    $scope.searchEnabled = false;
     $scope.tableInitialized = false;
     $scope.searchFinishedLoading = function () {
       return MessageSearch.finishedLoading();
     };
     $scope.searchProgress = function () {
       return MessageSearch.getLoadingProgress();
+    };
+
+    $scope.enableSearch = function () {
+      $scope.searchEnabled = true;
+      MessageSearch.startLoading();
     };
 
     // search parameters

@@ -13,6 +13,8 @@ angular.module('staticyahoo.search')
 
     var index = null;
 
+    var loadingStarted = false;
+
     var chunkI = 0;
     var totalChunks = 0;
     var progress = function (cur, total) {
@@ -22,11 +24,8 @@ angular.module('staticyahoo.search')
 
     elasticlunr.clearStopWords();
 
-    LocalJSONP.loadCompressed('./data/data.searchIndex', progress).then(function (obj) {
-      index = elasticlunr.Index.load(obj);
-    });
-
     return {
+      startLoading: startLoading,
       finishedLoading: finishedLoading,
       getLoadingProgress: getLoadingProgress,
       getSearchResults: getSearchResults
@@ -35,10 +34,29 @@ angular.module('staticyahoo.search')
     // ------------------------------------------------
 
     /**
+     * Start loading the search.
+     */
+    function startLoading() {
+      if (loadingStarted) {
+        return;
+      }
+
+      loadingStarted = true;
+
+      LocalJSONP.loadCompressed('./data/data.searchIndex', progress).then(function (obj) {
+        index = elasticlunr.Index.load(obj);
+      });
+    }
+
+    /**
      * Return whether search loading finished
      * @returns {boolean}
      */
     function finishedLoading() {
+      if (!totalChunks) {
+        return false;
+      }
+
       return chunkI === totalChunks;
     }
 

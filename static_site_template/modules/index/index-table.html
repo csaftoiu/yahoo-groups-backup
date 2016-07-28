@@ -14,21 +14,28 @@
 	  	            col-sm-10 col-sm-offset-1
 	  	            col-md-8  col-md-offset-2
 	  	            col-lg-6  col-lg-offset-3">
-        <div class="input-group" ng-show="searchFinishedLoading()">
-          <input type="text" class="form-control" ng-model="search.text"
-                 placeholder="Search messages, e.g. &quot;pure intent from:Richard&quot;, &quot;subject:excellence&quot;" />
-          <span class="input-group-btn">
-            <button type="submit" class="btn btn-primary">
-              <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-            </button>
-          </span>
+        <div ng-if="!searchEnabled" class="text-center">
+          <button ng-click="enableSearch()" class="btn btn-primary">
+            Click to Load Search
+          </button>
         </div>
-        <div ng-show="!searchFinishedLoading()">
-          <!-- 14px margin bottom to make it same height as input box, so when
-               loading is done the content does not move -->
-          <uib-progressbar max="1.0" value="searchProgress()" style="margin-bottom: 14px" animate="false">
-            <span style="color: white; white-space: nowrap;">Loading search...</span>
-          </uib-progressbar>
+        <div ng-if="searchEnabled">
+          <div class="input-group" ng-show="searchFinishedLoading()">
+            <input type="text" class="form-control" ng-model="search.text"
+                   placeholder="Search messages, e.g. &quot;pure intent from:Richard&quot;, &quot;subject:excellence&quot;" />
+            <span class="input-group-btn">
+              <button type="submit" class="btn btn-primary">
+                <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+              </button>
+            </span>
+          </div>
+          <div ng-show="!searchFinishedLoading()">
+            <!-- 14px margin bottom to make it same height as input box, so when
+                 loading is done the content does not move -->
+            <uib-progressbar max="1.0" value="searchProgress()" style="margin-bottom: 14px" animate="false">
+              <span style="color: white; white-space: nowrap;">Loading search...</span>
+            </uib-progressbar>
+          </div>
         </div>
       </div>
     </div>
