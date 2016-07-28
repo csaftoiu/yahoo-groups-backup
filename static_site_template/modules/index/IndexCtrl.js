@@ -29,7 +29,7 @@ angular.module('staticyahoo.index', ['staticyahoo.message', 'staticyahoo.search'
         return;
       }
 
-      dtTable.order(4);
+      dtTable.order([2, 'desc']);  // sort by descending date, as gmail does
       dtTable.draw('full-reset');
     };
 

@@ -24,6 +24,7 @@ import json
 import os
 import os.path as P
 import shutil
+import subprocess
 import sys
 import time
 
@@ -40,6 +41,15 @@ args_schema = schema.Schema({
     '--redact-before': schema.Use(int),
     object: object,
 })
+
+
+def check_node():
+    try:
+        subprocess.Popen(["node", "--version"], stdout=subprocess.PIPE).communicate()
+    except Exception:
+        return False
+
+    return True
 
 
 def mask_email(email):
@@ -261,6 +271,12 @@ angular
                 for message in self.db.yield_all_messages(start=start, end=end)
             ])
 
+    def render_search_indices(self):
+        subprocess.Popen([
+            'node', P.join(P.dirname(P.realpath(__file__)), 'generate_search_index.js'),
+            P.join(self.data_dir)
+        ]).communicate()
+
     def dump_files(self):
         """Dump all the group files into the files directory."""
         eprint("Dumping group files...")
@@ -286,6 +302,9 @@ angular
             self.render_config()
             return
 
+        if not check_node():
+            sys.exit("node not found - node is required to generate the search indices")
+
         if os.path.exists(self.dest_root_dir):
             sys.exit("Root site directory already exists. Specify a new directory or delete the existing one.")
 
@@ -298,6 +317,7 @@ angular
         self.render_config()
         self.render_index()
         self.render_messages()
+        self.render_search_indices()
         self.dump_files()
 
         eprint("Site is ready in '%s'!" % self.dest_root_dir)
