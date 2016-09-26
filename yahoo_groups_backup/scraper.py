@@ -98,11 +98,12 @@ class YahooBackupScraper:
         if 'profile' not in data:
             data['profile'] = None
 
-        # parse out the from to keep only the email. If th
+        # parse out the from to keep only the email
         if '&lt;' in data['from'] or '&gt;'in data['from']:
             assert '&lt;' in data['from'] and '&gt;' in data['from']
             stripped_name, from_remainder = data['from'].split('&lt;', 1)
             stripped_name = stripped_name.strip()
+
             # make sure we're not losing any information
             if stripped_name.startswith("&quot;"):
                 assert stripped_name.endswith("&quot;")
@@ -110,7 +111,9 @@ class YahooBackupScraper:
 
             # check that the stripped names match
             # but if we have a weird encoding thing then forget it
-            if not stripped_name.startswith("=?"):
+            # also sometimes the 'from' will not have the authorname, just an
+            # email, in which case there's no information to be lost
+            if stripped_name and not stripped_name.startswith("=?"):
                 if stripped_name.startswith("&quot;"):
                     assert stripped_name.endswith("&quot;")
                     stripped_name = stripped_name[6:-6].strip()
