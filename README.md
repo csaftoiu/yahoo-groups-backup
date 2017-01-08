@@ -3,7 +3,7 @@ A python script to backup the contents of Yahoo! groups, be they private or publ
 
 ## Setup/Requirements
 
-The project requires Python 3, Mongo, and a computer with a GUI as Selenium is used for the scraping (to be able to handle private groups).
+The project requires Python 3.5+, Mongo, and a computer with a GUI as Selenium is used for the scraping (to be able to handle private groups).
 
 [virtualenv](https://virtualenv.pypa.io/en/stable/) is recommended.
 
