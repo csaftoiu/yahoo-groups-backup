@@ -113,7 +113,8 @@ class YahooBackupScraper:
             # but if we have a weird encoding thing then forget it
             # also sometimes the 'from' will not have the authorname, just an
             # email, in which case there's no information to be lost
-            if stripped_name and not stripped_name.startswith("=?"):
+            # examples of weird name: "Martin =?ISO-8859-1?Q?Ahnel=F6v?="
+            if stripped_name and not ("=?" in stripped_name):
                 if stripped_name.startswith("&quot;"):
                     assert stripped_name.endswith("&quot;")
                     stripped_name = stripped_name[6:-6].strip()
