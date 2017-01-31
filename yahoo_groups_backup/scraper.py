@@ -135,7 +135,8 @@ class YahooBackupScraper:
             # leave only the email in
             data['from'], leftover = from_remainder.split('&gt;', 1)
             # make sure lost nothing on the right side
-            assert not leftover.strip()
+            if leftover.strip():
+                eprint("Discarding part of name:", leftover.strip())
 
         # replace no_reply with None for missing emails
         if data['from'] == 'no_reply@yahoogroups.com':
