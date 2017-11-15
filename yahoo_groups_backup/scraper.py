@@ -33,7 +33,9 @@ class YahooBackupScraper:
 
     def _is_login_page(self):
         html = self.br.html
-        return "Enter your email" in html and "Sign in" in html
+        eprint("Detecting the log-in page...")
+        # eprint(html)
+        return "Enter your&nbsp;email" in html and "Sign&nbsp;in" in html
 
     def _process_login_page(self):
         """Process the login page."""
@@ -59,6 +61,8 @@ class YahooBackupScraper:
     def _visit_with_login(self, url):
         """Visit the given URL. Logs in if necessary."""
         self.br.visit(url)
+        time.sleep(1)
+        time.sleep(1)
 
         if self._is_login_page():
             self._process_login_page()
@@ -210,33 +214,35 @@ class YahooBackupScraper:
 
         self._visit_with_login(url)
 
-        # get all elements with data-file - these are the file entries
+        # get all data-file attributes - these are the file entries
+        data_files = []
+        data_dirs = []
+
         for el in self.br.find_by_xpath("//*[@data-file]"):
-            # get the data
-            data = el._element.get_attribute('data-file')
-            # data is escaped; unescape it & interpret as JSON object
-            data = json.loads('{' + data.encode('utf8').decode('unicode_escape') + '}')
-
+            data = json.loads('{' + el['data-file'].encode('utf8').decode('unicode_escape') + '}')
             if data['fileType'] == 'd':
-                # recur into subdirectory
-                self.open_tab()
-                yield from self.yield_walk_files(data['filePath'])
-                self.close_tab()
+                data_dirs.append(data)
             elif data['fileType'] == 'f':
-                url = el.find_by_tag('a')[0]._element.get_attribute('href')
-                profile = el._element.find_element_by_class_name('yg-list-auth').text
-                date_str = el._element.find_element_by_class_name('yg-list-date').text
-                the_date = dateutil.parser.parse(date_str)
-
-                yield {
-                    'filePath': urllib.parse.unquote(data['filePath']),
-                    'url': url,
-                    'mime': data['mime'],
-                    'size': float(data['size']),
-                    'profile': profile,
-                    'date': the_date,
-                }
+                data_files.append(data)
             else:
                 raise NotImplementedError("Unknown fileType %s, data was %s" % (
                     data['fileType'], json.dumps(data),
                 ))
+
+        for data in data_files:
+            url = el.find_by_tag('a')[0]._element.get_attribute('href')
+            profile = el._element.find_element_by_class_name('yg-list-auth').text
+            date_str = el._element.find_element_by_class_name('yg-list-date').text
+            the_date = dateutil.parser.parse(date_str)
+
+            yield {
+                'filePath': urllib.parse.unquote(data['filePath']),
+                'url': url,
+                'mime': data['mime'],
+                'size': float(data['size']),
+                'profile': profile,
+                'date': the_date,
+            }
+
+        for data in data_dirs:
+            yield from self.yield_walk_files(data['filePath'])
