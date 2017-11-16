@@ -22,8 +22,8 @@ def command(arguments):
     cli = pymongo.MongoClient(arguments['--mongo-host'], arguments['--mongo-port'])
     db = YahooBackupDB(cli, arguments['<group_name>'])
     scraper = YahooBackupScraper(
-        arguments['<group_name>'], arguments['--driver'], arguments['--login'],
-        arguments['--password'])
+        arguments['<group_name>'], arguments['--driver'], login_email=arguments['--login'],
+        password=arguments['--password'])
 
     for file_info in scraper.yield_walk_files():
         if not db.has_file_entry(file_info['filePath']) or not db.has_file_data(file_info['filePath']):
