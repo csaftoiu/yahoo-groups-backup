@@ -10,6 +10,8 @@ The project requires Python 3.5+, Mongo, and a computer with a GUI as Selenium i
     git clone https://github.com/csaftoiu/yahoo-groups-backup.git
     cd yahoo-groups-backup
     pip install -r requirements.txt
+    cp redactions.yaml.template redactions.yaml # edit this file if you want
+    cp settings.yaml.template settings.yaml # definitely edit this file with your yahoo credentials
 
 ## Example
 
