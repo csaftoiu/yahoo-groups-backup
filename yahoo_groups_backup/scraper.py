@@ -47,14 +47,14 @@ class YahooBackupScraper:
         # email ...
         self.br.fill("username", self.login_email)
         time.sleep(1)
-        self.br.find_by_name("signin").click()
+        self.br.execute_script("document.getElementById('login-username-form').submit();")
         # Wait ...
         time.sleep(2)
 
         # password ...
         self.br.fill("password", self.password)
         time.sleep(1)
-        self.br.find_by_name("verifyPassword").click()
+        self.br.execute_script("document.getElementById('login-signin').click()")
         # Wait ...
         time.sleep(2)
 
