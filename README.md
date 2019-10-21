@@ -9,6 +9,8 @@ You will need:
 * a computer with a GUI as Selenium is used for the scraping (to be able to handle private groups)
 * a driver for Selenium to use with the browser ([Chromedriver](https://chromedriver.chromium.org/) is recommended as Firefox is no longer compatible with this script).
 
+MacOS users in particular may also require a recent version of `icu4c`, available through Homebrew.
+
 [pyenv](https://github.com/pyenv/pyenv) or [virtualenv](https://virtualenv.pypa.io/en/stable/) is recommended.
 
     git clone https://github.com/csaftoiu/yahoo-groups-backup.git
