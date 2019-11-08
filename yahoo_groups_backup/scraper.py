@@ -35,7 +35,7 @@ class YahooBackupScraper:
         html = self.br.html
         eprint("Detecting the log-in page...")
         # eprint(html)
-        return "Enter your&nbsp;email" in html and "Sign&nbsp;in" in html
+        return 'form id="login-username-form"' in html
 
     def _process_login_page(self):
         """Process the login page."""
@@ -47,14 +47,14 @@ class YahooBackupScraper:
         # email ...
         self.br.fill("username", self.login_email)
         time.sleep(1)
-        self.br.find_by_name("signin").click()
+        self.br.execute_script("document.getElementById('login-username-form').submit();")
         # Wait ...
         time.sleep(2)
 
         # password ...
         self.br.fill("password", self.password)
         time.sleep(1)
-        self.br.find_by_name("verifyPassword").click()
+        self.br.execute_script("document.getElementById('login-signin').click()")
         # Wait ...
         time.sleep(2)
 
@@ -104,7 +104,8 @@ class YahooBackupScraper:
 
         # parse out the from to keep only the email
         if '&lt;' in data['from'] or '&gt;'in data['from']:
-            assert '&lt;' in data['from'] and '&gt;' in data['from']
+            # start by taking out &lt; if it exists
+            assert '&lt;' in data['from']
             stripped_name, from_remainder = data['from'].rsplit('&lt;', 1)
             stripped_name = stripped_name.strip()
 
@@ -137,7 +138,12 @@ class YahooBackupScraper:
                             ( stripped_name, data['authorName'], check_authorname ))
 
             # leave only the email in
-            data['from'], leftover = from_remainder.split('&gt;', 1)
+            # sometimes the from is malformed, and does not have &gt;, but does have a trailing ...
+            if not ('&gt;' in from_remainder):
+                data['from'], leftover = from_remainder.split('...', 1)
+            else:
+                data['from'], leftover = from_remainder.split('&gt;', 1)
+
             # make sure lost nothing on the right side
             if leftover.strip():
                 eprint("Discarding part of name:", leftover.strip())
